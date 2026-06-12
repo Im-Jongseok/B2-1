@@ -1,3 +1,7 @@
+# custom ignore
+*.pdf   
+.DS_store   
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
