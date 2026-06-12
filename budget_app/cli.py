@@ -1,157 +1,29 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+import argparse
+
 from datetime import date
 from pathlib import Path
-from typing import Generator
 
-import argparse
-import json
-import os
-
-DEFAULT_DATA_DIR = Path("../data")
-DEFAULT_CATEGORIES = {
-    'food',
-    'shopping',
-}
-
-
-
-""" 거래 내역 데이터 모델"""
-@dataclass
-class Transaction:
-    id: str
-    type: str           # income || expense
-    date: str           # YYYY-MM-DD
-    amount: int         # 양수
-    category: str
-
-    def __post_init__(self) -> None:
-        if self.type not in ('income', 'expense'):
-            raise ValueError()
-        
-        try:
-            date.fromisoformat(self.date)
-        except (ValueError, TypeError):
-            raise ValueError()
-        
-        if not isinstance(self.amount, int) or self.amount <= 0:
-            raise ValueError()
-        
-        if not self.category:
-            raise ValueError()
-        
-    def to_dict(self) -> dict:
-        return asdict(self)
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> Transaction:
-        return cls(**data)
-    
-
-""" JSONL """
-def create_jsonl(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        path.touch()
-
-def append_jsonl(path: Path, record: dict) -> None:
-    with path.open('a', encoding='utf-8') as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-def read_jsonl(path: Path) -> Generator[dict, None, None]:
-    with path.open('r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                yield json.loads(line)
-
-
-""" 거래 내역 저장소"""
-class TransactionRepository:
-
-    def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
-        self._path = data_dir / "transactions.jsonl"
-        create_jsonl(self._path)
-
-    def stream(self) -> Generator[dict, None, None]:
-        yield from read_jsonl(self._path)
-
-    def generate_id(self) -> str:
-        max_num = 0
-        for record in self.stream():
-            try:
-                num  = int(record['id'].split('-')[1])
-                if num > max_num:
-                    max_num = num
-            except (IndexError, ValueError):
-                continue
-        return f"TX-{max_num + 1:06d}"
-
-    def add(self, transaction: Transaction) -> None:
-        append_jsonl(self._path, transaction.to_dict())
-
-
-""" 카테고리 저장소 """
-class CategoryRepository:
-
-    def __init__(self, data_dir: Path= DEFAULT_DATA_DIR) -> None:
-        self._path = data_dir / "categories.jsonl"
-        create_jsonl(self._path)
-        # (A) 기본 카태고리 자동 생성
-        if self._is_empty():
-            self._init_default()
-
-    def _is_empty(self) -> bool:
-        return os.path.getsize(self._path) == 0
-    
-    def _init_default(self) -> None:
-        for category in DEFAULT_CATEGORIES:
-            append_jsonl(self._path, {'category': category})
-
-    def list_categories(self) -> list[str]:
-        return [record['category'] for record in read_jsonl(self._path)]
-    
-    def exists(self, category: str) -> bool:
-        return category in self.list_categories()
-    
-""" 가계부 로직 """
-class BudgetService:
-
-    def __init__(self, data_dir: Path = DEFAULT_DATA_DIR):
-        self.tx_repo = TransactionRepository(data_dir)
-        self.category_repo = CategoryRepository(data_dir)
-
-    def add_transaction(
-            self,
-            type: str,
-            date: str,
-            amount: int,
-            category: str,
-    ) -> Transaction:
-        
-        if not self.category_repo.exists(category):
-            raise ValueError()
-        
-        tx_id = self.tx_repo.generate_id()
-        tx = Transaction(
-            id = tx_id,
-            type=type,
-            date=date,
-            amount=amount,
-            category=category
-        )
-        self.tx_repo.add(tx)
-    
-        return tx
+from .constants import DEFAULT_DATA_DIR
+from .service import BudgetService
 
 
 """ parser 구축 """
 def _build_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data-dir', type=Path, default=DEFAULT_DATA_DIR)
+    parser = argparse.ArgumentParser(
+        prog="budget_app",
+        description="파일 기반 가계부 콘솔 프로그램",
+    )
+    parser.add_argument(
+        '--data-dir',
+        type=Path, 
+        default=DEFAULT_DATA_DIR, 
+        help="데이터 파일 저장 경로 (기본: ./data)"
+    )
 
     sub = parser.add_subparsers(dest='command', help='사용가능한 명령어')
+
     sub.add_parser('add', help='거래 추가')
 
     return parser
@@ -235,4 +107,4 @@ def main() -> int:
     return handler(args)
 
 if __name__ == "__main__":
-      main()
+    main()
