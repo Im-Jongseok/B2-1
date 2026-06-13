@@ -3,10 +3,10 @@ from pathlib import Path
 
 DEFAULT_DATA_DIR = Path('./data')
 
-DEFAULT_CATEGORIES = {
-    'food',
-    'shopping',
-}
+DEFAULT_CATEGORIES = [
+    'salary', 'food', 'transport', 'rent',
+    'shopping', 'utilities', 'healthcare', 'education', 'other',
+]
 
 
 class Files:
@@ -42,9 +42,11 @@ class TxField:
 class Prefix:
     ERROR      = '[오류]'
     HINT       = '[힌트]'
-    SAVE_OK    = '[저장 완료]'
-    CATEGORIES = '[등록된 카테고리]'
+    OK         = '[{} 완료]'
+    CATEGORIES = '[카테고리 목록]'
     INFO       = '[정보]'
+    SAVE       = '저장'
+    REMOVE     = '삭제'
 
 
 class Msg:
@@ -54,11 +56,19 @@ class Msg:
         AMOUNT_NOT_NUM     = '숫자만 입력 가능합니다.'
         AMOUNT_NOT_POS     = '0보다 큰 금액을 입력하세요.'
         CATEGORY_NOT_FOUND = '"{}"은(는) 등록되지 않은 카테고리입니다.'
+        CATEGORY_ALREADY_EXIST  = '"{}"은(는) 이미 존재하는 카테고리입니다.'
+        CATEGORY_INVALID_CMD    = 'category add / list / remove 중 선택하세요.'
+        CATEGORY_USED           = '{} 카테고리를 사용하는 거래가 있어 삭제할 수 없습니다.'
         CATEGORY_EMPTY     = '카테고리를 입력하세요.'
 
     class Hint:
-        DATE_FORMAT  = '예: 2024-01-15'
-        CATEGORY_ADD = 'category add 명령으로 카테고리를 먼저 등록하세요.'
+        DATE_FORMAT       = '예: 2024-01-15'
+        TYPE_INVALID      = '예: income (수입) 또는 expense (지출)'
+        AMOUNT            = '예: 50000'
+        CATEGORY_LIST     = 'budget_app category list로 현재 카테고리를 조회하세요.'
+        CATEGORY_ADD      = 'category add 명령으로 카테고리를 먼저 등록하세요.'
+        CATEGORY_USED     = '해당 카테고리를 사용하는 거래를 먼저 삭제하거나 수정하세요.'
+        CATEGORY_INVALID_CMD = '예: budget_app category list'
 
     class Info:
         SAVE_OK = 'id={}'
@@ -123,8 +133,8 @@ class CLI:
         TX_TYPE        = 'tx_type'
         TX_ID          = 'tx_id'
         FROM_FILE      = 'from_file'
-        BUDGET_COMMAND = 'budget_command'
-        CAT_COMMAND    = 'cat_command'
+        BUDGET_CMD = 'budget_cmd'
+        CATEGORY_CMD    = 'category_cmd'
 
     class Help:
         ADD          = '거래 추가'
@@ -134,9 +144,9 @@ class CLI:
         BUDGET       = '예산 관리'
         BUDGET_SET   = '예산 설정'
         CATEGORY     = '카테고리 관리'
-        CAT_ADD      = '카테고리 추가 (대화형)'
-        CAT_LIST     = '카테고리 목록'
-        CAT_REMOVE   = '카테고리 삭제 (대화형)'
+        CATEGORY_ADD      = '카테고리 추가 (대화형)'
+        CATEGORY_LIST     = '카테고리 목록'
+        CATEGORY_REMOVE   = '카테고리 삭제 (대화형)'
         UPDATE       = '거래 수정 (옵션 기반)'
         DELETE       = '거래 삭제'
         EXPORT       = 'CSV 내보내기'
@@ -149,13 +159,8 @@ class CLI:
         OUT          = '출력 파일 경로'
         FROM_DATE    = '시작일 (YYYY-MM-DD)'
         TO_DATE      = '종료일 (YYYY-MM-DD)'
-        CATEGORY_ARG = '카테고리'
         TX_TYPE      = '타입'
-        KEYWORD      = '메모 키워드'
-        TAG          = '태그'
         DATE_ARG     = '변경할 날짜'
         TYPE_ARG     = '변경할 타입'
-        CAT_ARG      = '변경할 카테고리'
+        CATEGORY_ARG = '변경할 카테고리'
         AMOUNT_ARG   = '변경할 금액'
-        MEMO_ARG     = '변경할 메모'
-        TAGS_ARG     = '변경할 태그 (쉼표 구분)'

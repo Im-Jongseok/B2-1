@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 
 from pathlib import Path
 from typing import Generator
@@ -31,6 +32,29 @@ def read_jsonl(path: Path) -> Generator[dict, None, None]:
             line = line.strip()
             if line:
                 yield json.loads(line)
+
+# atomic write
+def rewrite_jsonl(path: Path, records: list[dict]) -> None:
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            dir=path.parent,
+            suffix='.tmp',
+            encoding='utf-8',
+            delete=False,
+        ) as fd:
+            tmp_path = fd.name
+            for record in records:
+                fd.write(json.dumps(record, ensure_ascii=False) + '\n')
+            fd.flush()
+            os.fsync(fd.fileno())
+        os.replace(tmp_path, path)
+    except Exception:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+
 
 
 # ── 저장소 ───────────────────────────────────────────────────
@@ -84,3 +108,14 @@ class CategoryRepository:
 
     def exists(self, category: str) -> bool:
         return category in self.list_categories()
+
+    def add(self, category: str) -> None:
+        append_jsonl(self._path, {TxField.CATEGORY: category})
+    
+    def remove(self, category: str) -> bool:
+        records = list(read_jsonl(self._path))
+        # atomic delete
+        new_records = [r for r in records if r[TxField.CATEGORY] != category]
+
+        rewrite_jsonl(self._path, new_records)
+        return True
