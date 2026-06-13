@@ -4,9 +4,15 @@ import argparse
 
 from datetime import date
 from pathlib import Path
+from itertools import islice
 
-from .constants import DEFAULT_DATA_DIR, TxType, TxField, CLI, Prefix, Msg, Prompt
+from .constants import (
+    DEFAULT_DATA_DIR,
+    TxType, TxField,
+    CLI, Prefix, Msg, Prompt,
+)
 from .service import BudgetService
+from .repository import TransactionRepository
 
 
 """ parser 구축 """
@@ -16,16 +22,20 @@ def _build_parser():
         description=CLI.DESCRIPTION,
     )
     parser.add_argument(
-        '--data-dir',
+        CLI.DATA_DIR_OPT,
         type=Path,
         default=DEFAULT_DATA_DIR,
-        help=CLI.Help.DATA_DIR,
+        help=CLI.DATA_DIR_HELP,
     )
 
-    sub = parser.add_subparsers(dest='command', help=CLI.Help.COMMAND)
+    sub = parser.add_subparsers(dest=CLI.COMMAND_DEST, help=CLI.COMMAND_HELP)
 
     # add
     sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
+
+    # list
+    p_list = sub.add_parser(CLI.Command.LIST, help=CLI.Help.LIST)
+    p_list.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
 
     return parser
 
@@ -64,7 +74,7 @@ def _ask_type() -> str:
 def _ask_category(svc: BudgetService) -> str:
     categories = svc.category_repo.list_categories()
     while True:
-        print(f'{Prefix.INFO} {", ".join(categories)}')
+        print(f'{Prefix.CATEGORIES} {", ".join(categories)}')
         raw = input(Prompt.CATEGORY).strip().lower()
         if raw in categories:
             return raw
@@ -85,7 +95,7 @@ def _ask_amount() -> int:
             print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_NUM}')
 
 
-""" 거레 추가 """
+""" 거래 추가 """
 def cmd_add(args: argparse.Namespace) -> int:
 
     service = BudgetService(args.data_dir)
@@ -96,8 +106,35 @@ def cmd_add(args: argparse.Namespace) -> int:
 
     return 0
 
+""" 거래 목록 출력 """
+def cmd_list(args: argparse.Namespace) -> int:
+    tx_repo = TransactionRepository(args.data_dir)
+    records = list(tx_repo.stream())
+    if not records:
+        print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
+        return 0
+    for record in islice(reversed(records), args.limit):
+        _print_tx(record)
+    return 0
+
+
+def _print_tx(r: dict) -> None:
+    tx_type = TxType.INCOME_KO if r[TxField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
+    amount_str = f"{r[TxField.AMOUNT]:,}원"
+    
+    print(
+        f"  {r[TxField.ID]} | "
+        f"{r[TxField.DATE]} | "
+        f"{tx_type} | "
+        f"{r[TxField.CATEGORY]:<12} | "
+        f"{amount_str:>12}"
+    )
+
+
+
 _COMMANDS = {
-    CLI.Command.ADD: cmd_add,
+    CLI.Command.ADD:  cmd_add,
+    CLI.Command.LIST: cmd_list,
 }
 
 

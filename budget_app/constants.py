@@ -16,40 +16,17 @@ class Files:
 
 
 class TxType:
-    INCOME  = 'income'
-    EXPENSE = 'expense'
-    ALL     = (INCOME, EXPENSE)
+    INCOME     = 'income'
+    EXPENSE    = 'expense'
+    ALL        = (INCOME, EXPENSE)
+    INCOME_KO  = '수입'
+    EXPENSE_KO = '지출'
 
 
 class TxId:
     PREFIX = 'TX'
-    SEP = '-'
+    SEP    = '-'
     FORMAT = PREFIX + SEP + '{:06d}'
-
-
-class Prefix:
-    ERROR    = '[오류]'
-    HINT     = '[힌트]'
-    SAVE_OK  = '[저장 완료]'
-    INFO     = '[등록된 카테고리]'
-
-
-class Msg:
-    class Error:
-        DATE_FORMAT        = '날짜 형식이 올바르지 않습니다.'
-        TYPE_INVALID       = 'income 또는 expense만 입력 가능합니다.'
-        AMOUNT_NOT_NUM     = '숫자만 입력 가능합니다.'
-        AMOUNT_NOT_POS     = '0보다 큰 금액을 입력하세요.'
-        CATEGORY_NOT_FOUND = '"{}"은(는) 등록되지 않은 카테고리입니다.'
-        CATEGORY_EMPTY     = '카테고리를 입력하세요.'
-
-    class Hint:
-        DATE_FORMAT   = '예: 2024-01-15'
-        CATEGORY_ADD  = 'category add 명령으로 카테고리를 먼저 등록하세요.'
-
-    class Info:
-        CATEGORIES = '{}'
-        SAVE_OK    = 'id={}'
 
 
 class TxField:
@@ -62,9 +39,48 @@ class TxField:
     TAGS     = 'tags'
 
 
+class Prefix:
+    ERROR      = '[오류]'
+    HINT       = '[힌트]'
+    SAVE_OK    = '[저장 완료]'
+    CATEGORIES = '[등록된 카테고리]'
+    INFO       = '[정보]'
+
+
+class Msg:
+    class Error:
+        DATE_FORMAT        = '날짜 형식이 올바르지 않습니다.'
+        TYPE_INVALID       = 'income 또는 expense만 입력 가능합니다.'
+        AMOUNT_NOT_NUM     = '숫자만 입력 가능합니다.'
+        AMOUNT_NOT_POS     = '0보다 큰 금액을 입력하세요.'
+        CATEGORY_NOT_FOUND = '"{}"은(는) 등록되지 않은 카테고리입니다.'
+        CATEGORY_EMPTY     = '카테고리를 입력하세요.'
+
+    class Hint:
+        DATE_FORMAT  = '예: 2024-01-15'
+        CATEGORY_ADD = 'category add 명령으로 카테고리를 먼저 등록하세요.'
+
+    class Info:
+        SAVE_OK = 'id={}'
+        NO_DATA = '데이터 없음'
+
+
+class Prompt:
+    DATE     = '날짜(YYYY-MM-DD): '
+    TYPE     = '타입(income/expense): '
+    CATEGORY = '카테고리: '
+    AMOUNT   = '금액(양수): '
+    MEMO     = '메모(선택): '
+    TAGS     = '태그(쉼표로 구분, 없으면 엔터): '
+
+
 class CLI:
-    PROG        = 'budget_app'
-    DESCRIPTION = '파일 기반 가계부 콘솔 프로그램'
+    PROG         = 'budget_app'
+    DESCRIPTION  = '파일 기반 가계부 콘솔 프로그램'
+    DATA_DIR_OPT  = '--data-dir'
+    DATA_DIR_HELP = '데이터 파일 저장 경로 (기본: ./data)'
+    COMMAND_DEST  = 'command'
+    COMMAND_HELP  = '사용가능한 명령어'
 
     class Command:
         ADD      = 'add'
@@ -80,8 +96,11 @@ class CLI:
         SET      = 'set'
         REMOVE   = 'remove'
 
+    class Default:
+        LIMIT = 10
+        TOP   = 5
+
     class Opt:
-        DATA_DIR = '--data-dir'
         LIMIT    = '--limit'
         FROM     = '--from'
         TO       = '--to'
@@ -99,7 +118,6 @@ class CLI:
         AMOUNT   = '--amount'
 
     class Dest:
-        COMMAND        = 'command'
         FROM_DATE      = 'from_date'
         TO_DATE        = 'to_date'
         TX_TYPE        = 'tx_type'
@@ -108,13 +126,7 @@ class CLI:
         BUDGET_COMMAND = 'budget_command'
         CAT_COMMAND    = 'cat_command'
 
-    class Default:
-        LIMIT = 10
-        TOP   = 5
-
     class Help:
-        DATA_DIR     = '데이터 파일 저장 경로 (기본: ./data)'
-        COMMAND      = '사용가능한 명령어'
         ADD          = '거래 추가'
         LIST         = '거래 목록 조회'
         SEARCH       = '거래 검색'
@@ -147,12 +159,3 @@ class CLI:
         AMOUNT_ARG   = '변경할 금액'
         MEMO_ARG     = '변경할 메모'
         TAGS_ARG     = '변경할 태그 (쉼표 구분)'
-
-
-class Prompt:
-    DATE     = '날짜(YYYY-MM-DD): '
-    TYPE     = '타입(income/expense): '
-    CATEGORY = '카테고리: '
-    AMOUNT   = '금액(양수): '
-    MEMO     = '메모(선택): '
-    TAGS     = '태그(쉼표로 구분, 없으면 엔터): '
