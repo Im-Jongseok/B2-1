@@ -1,6 +1,8 @@
 # custom ignore
 *.pdf   
 .DS_store   
+CLAUDE.md
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

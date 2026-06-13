@@ -6,13 +6,14 @@ from dataclasses import dataclass, asdict
 from .constants import TxType, Msg
 
 
-""" 거래 내역 데이터 모델"""
 @dataclass
 class Transaction:
+    """단일 거래 내역. 생성 시 유효성을 검증한다."""
+
     id: str
-    type: str           # income || expense
-    date: str           # YYYY-MM-DD
-    amount: int         # 양수
+    type: str       # income | expense
+    date: str       # YYYY-MM-DD
+    amount: int     # 양수
     category: str
 
     def __post_init__(self) -> None:
@@ -29,11 +30,10 @@ class Transaction:
 
         if not self.category:
             raise ValueError(Msg.Error.CATEGORY_EMPTY)
-        
+
     def to_dict(self) -> dict:
         return asdict(self)
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> Transaction:
         return cls(**data)
-    
