@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Generator
 
-from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES
+from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField
 from .models import Transaction
 
 
@@ -32,7 +32,7 @@ def read_jsonl(path: Path) -> Generator[dict, None, None]:
 class TransactionRepository:
 
     def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
-        self._path = data_dir / "transactions.jsonl"
+        self._path = data_dir / Files.TRANSACTIONS
         create_jsonl(self._path)
 
     def stream(self) -> Generator[dict, None, None]:
@@ -42,12 +42,12 @@ class TransactionRepository:
         max_num = 0
         for record in self.stream():
             try:
-                num  = int(record['id'].split('-')[1])
+                num  = int(record[TxField.ID].split(TxId.SEP)[1])
                 if num > max_num:
                     max_num = num
             except (IndexError, ValueError):
                 continue
-        return f"TX-{max_num + 1:06d}"
+        return TxId.FORMAT.format(max_num + 1)
 
     def add(self, transaction: Transaction) -> None:
         append_jsonl(self._path, transaction.to_dict())
@@ -57,7 +57,7 @@ class TransactionRepository:
 class CategoryRepository:
 
     def __init__(self, data_dir: Path= DEFAULT_DATA_DIR) -> None:
-        self._path = data_dir / "categories.jsonl"
+        self._path = data_dir / Files.CATEGORIES
         create_jsonl(self._path)
         # (A) 기본 카태고리 자동 생성
         if self._is_empty():
@@ -68,10 +68,10 @@ class CategoryRepository:
     
     def _init_default(self) -> None:
         for category in DEFAULT_CATEGORIES:
-            append_jsonl(self._path, {'category': category})
+            append_jsonl(self._path, {TxField.CATEGORY: category})
 
     def list_categories(self) -> list[str]:
-        return [record['category'] for record in read_jsonl(self._path)]
+        return [record[TxField.CATEGORY] for record in read_jsonl(self._path)]
     
     def exists(self, category: str) -> bool:
         return category in self.list_categories()

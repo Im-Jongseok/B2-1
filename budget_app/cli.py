@@ -5,26 +5,27 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-from .constants import DEFAULT_DATA_DIR
+from .constants import DEFAULT_DATA_DIR, TxType, TxField, CLI, Prefix, Msg, Prompt
 from .service import BudgetService
 
 
 """ parser 구축 """
 def _build_parser():
     parser = argparse.ArgumentParser(
-        prog="budget_app",
-        description="파일 기반 가계부 콘솔 프로그램",
+        prog=CLI.PROG,
+        description=CLI.DESCRIPTION,
     )
     parser.add_argument(
         '--data-dir',
-        type=Path, 
-        default=DEFAULT_DATA_DIR, 
-        help="데이터 파일 저장 경로 (기본: ./data)"
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help=CLI.Help.DATA_DIR,
     )
 
-    sub = parser.add_subparsers(dest='command', help='사용가능한 명령어')
+    sub = parser.add_subparsers(dest='command', help=CLI.Help.COMMAND)
 
-    sub.add_parser('add', help='거래 추가')
+    # add
+    sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
 
     return parser
 
@@ -35,46 +36,53 @@ def _input_tx(svc: BudgetService) -> dict:
     tx_category = _ask_category(svc)
     tx_amount = _ask_amount()
 
-    return {'date': tx_date, 'type': tx_type, 'category': tx_category, 'amount': tx_amount}
+    return {
+        TxField.DATE:     tx_date,
+        TxField.TYPE:     tx_type,
+        TxField.CATEGORY: tx_category,
+        TxField.AMOUNT:   tx_amount,
+    }
         
 def _ask_date() -> str:
     while True:
-        raw = input("날짜(YYYY-MM-DD): ").strip()
+        raw = input(Prompt.DATE).strip()
         try:
             date.fromisoformat(raw)
             return raw
         except ValueError:
-            print()
+            print(f'{Prefix.ERROR} {Msg.Error.DATE_FORMAT}')
+            print(f'{Prefix.HINT} {Msg.Hint.DATE_FORMAT}')
 
 def _ask_type() -> str:
     while True:
-        raw = input("타입(income/expense): ").strip().lower()
-        if raw in ("income", "expense"):
+        raw = input(Prompt.TYPE).strip().lower()
+        if raw in TxType.ALL:
             return raw
+        print(f'{Prefix.ERROR} {Msg.Error.TYPE_INVALID}')
 
 
 def _ask_category(svc: BudgetService) -> str:
     categories = svc.category_repo.list_categories()
     while True:
-        print(f"[등록된 카테고리] {', '.join(categories)}")
-        raw = input("카테고리: ").strip().lower()
-        if not raw:
-            continue
-        if raw not in categories:
-            continue
-        return raw
+        print(f'{Prefix.INFO} {", ".join(categories)}')
+        raw = input(Prompt.CATEGORY).strip().lower()
+        if raw in categories:
+            return raw
+        print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_NOT_FOUND.format(raw)}')
+        print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_ADD}')
 
 
 def _ask_amount() -> int:
     while True:
-        raw = input("금액(양수): ").strip()
+        raw = input(Prompt.AMOUNT).strip()
         try:
             amount = int(raw)
             if amount <= 0:
+                print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_POS}')
                 continue
             return amount
         except ValueError:
-            print()
+            print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_NUM}')
 
 
 """ 거레 추가 """
@@ -83,12 +91,13 @@ def cmd_add(args: argparse.Namespace) -> int:
     service = BudgetService(args.data_dir)
 
     tx = _input_tx(service)
-    service.add_transaction(**tx)
+    result = service.add_transaction(**tx)
+    print(f'{Prefix.SAVE_OK} {Msg.Info.SAVE_OK.format(result.id)}')
 
     return 0
 
 _COMMANDS = {
-    'add': cmd_add,
+    CLI.Command.ADD: cmd_add,
 }
 
 
