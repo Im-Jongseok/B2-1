@@ -151,7 +151,7 @@ def cmd_search(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
-    for record in records:
+    for record in reversed(records):
         _print_tx(record)
     return 0
 
@@ -211,7 +211,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
-    for record in islice(records, args.limit):
+    for record in islice(reversed(records), args.limit):
         _print_tx(record)
     return 0
 
