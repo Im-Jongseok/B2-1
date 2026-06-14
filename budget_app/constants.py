@@ -62,6 +62,7 @@ class Msg:
         CATEGORY_EMPTY     = '카테고리를 입력하세요.'
         TX_NOT_FOUND       = '"{}" 거래를 찾을 수 없습니다.'
         NO_CHANGES         = '변경할 항목을 하나 이상 지정하세요.'
+        CONFIRM_INVALID    = 'y 또는 n만 입력 가능합니다.'
 
     class Hint:
         DATE_FORMAT       = '예: 2024-01-15'
@@ -72,17 +73,31 @@ class Msg:
         CATEGORY_USED     = '해당 카테고리를 사용하는 거래를 먼저 삭제하거나 수정하세요.'
         CATEGORY_INVALID_CMD = '예: budget_app category list'
         TX_ID             = '예: TX-000001 (list 명령으로 ID를 확인하세요.)'
+        CONFIRM_INVALID   = 'y(삭제) 또는 n(취소)을 입력하세요.'
 
     class Info:
-        SAVE_OK = 'id={}'
-        NO_DATA = '데이터 없음'
+        SAVE_OK           = 'id={}'
+        NO_DATA           = '데이터 없음'
+        DELETE_CANCELLED  = '삭제를 취소했습니다.'
+
+
+class Confirm:
+    YES = 'y'
+    NO  = 'n'
+
+
+class Fmt:
+    CURRENCY  = '원'
+    KV_SEP    = '='
+    LIST_SEP  = ', '
 
 
 class Prompt:
     DATE          = '날짜(YYYY-MM-DD): '
     TYPE          = '타입(income/expense): '
     CATEGORY      = '카테고리: '
-    UPDATE_FIELDS = '수정할 필드 (date type category amount, 공백 구분): '
+    UPDATE_FIELDS  = '수정할 필드 (date type category amount, 공백 구분): '
+    DELETE_CONFIRM = '정말 삭제하시겠습니까? (y/n): '
     AMOUNT   = '금액(양수): '
     MEMO     = '메모(선택): '
     TAGS     = '태그(쉼표로 구분, 없으면 엔터): '

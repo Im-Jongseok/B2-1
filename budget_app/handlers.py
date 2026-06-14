@@ -7,7 +7,8 @@ from itertools import islice
 
 from .constants import (
     TxType, TxField,
-    Prefix, Msg, Prompt, CLI
+    Prefix, Msg, Prompt, CLI,
+    Confirm, Fmt,
 )
 from .repository import TransactionRepository, CategoryRepository
 from .service import BudgetService
@@ -51,7 +52,7 @@ def _ask_new_category(category_repo: CategoryRepository) -> str:
 def _ask_category(category_repo: CategoryRepository) -> str:
     categories = category_repo.list_categories()
     while True:
-        print(f'{Prefix.CATEGORIES} {", ".join(categories)}')
+        print(f'{Prefix.CATEGORIES} {Fmt.LIST_SEP.join(categories)}')
         raw = input(Prompt.CATEGORY).strip().lower()
         if raw in categories:
             return raw
@@ -100,7 +101,7 @@ def _input_tx(svc: BudgetService) -> dict:
 
 def _print_tx(r: dict) -> None:
     tx_type = TxType.INCOME_KO if r[TxField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
-    amount_str = f"{r[TxField.AMOUNT]:,}원"
+    amount_str = f"{r[TxField.AMOUNT]:,}{Fmt.CURRENCY}"
     print(
         f"{r[TxField.ID]} | "
         f"{r[TxField.DATE]} | "
@@ -174,8 +175,33 @@ def cmd_update(args: argparse.Namespace) -> int:
         return 1
 
     tx_repo.update(args.tx_id, fields)
-    print(f'{Prefix.OK.format(Prefix.SAVE)} id={args.tx_id}')
+    print(f'{Prefix.OK.format(Prefix.SAVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
     _print_tx({**record, **fields})
+    return 0
+
+
+def cmd_delete(args: argparse.Namespace) -> int:
+    tx_repo = TransactionRepository(args.data_dir)
+
+    record = tx_repo.find(args.tx_id)
+    if record is None:
+        print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
+        print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
+        return 1
+
+    _print_tx(record)
+    confirm = input(Prompt.DELETE_CONFIRM).strip().lower()
+    if confirm == Confirm.NO:
+        print(f'{Prefix.INFO} {Msg.Info.DELETE_CANCELLED}')
+        return 0
+    elif confirm != Confirm.YES:
+        print(f'{Prefix.ERROR} {Msg.Error.CONFIRM_INVALID}')
+        print(f'{Prefix.HINT} {Msg.Hint.CONFIRM_INVALID}')
+        return 1
+
+
+    tx_repo.delete(args.tx_id)
+    print(f'{Prefix.OK.format(Prefix.REMOVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
     return 0
 
 
@@ -197,12 +223,12 @@ def cmd_category(args: argparse.Namespace) -> int:
         categories = category_repo.list_categories()
         print(f'{Prefix.CATEGORIES} ({len(categories)})')
         for c in categories:
-            print(f"{c}")
+            print(f'{c}')
 
     elif args.category_cmd == CLI.Command.ADD:
         category = _ask_new_category(category_repo)
         category_repo.add(category)
-        print(f'{Prefix.OK.format(Prefix.SAVE)} {CLI.Command.CATEGORY}={category}')
+        print(f'{Prefix.OK.format(Prefix.SAVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
     
     elif args.category_cmd == CLI.Command.REMOVE:
         tx_repo = TransactionRepository(args.data_dir)
@@ -216,7 +242,7 @@ def cmd_category(args: argparse.Namespace) -> int:
             return 1
 
         category_repo.remove(category)
-        print(f'{Prefix.OK.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}={category}')
+        print(f'{Prefix.OK.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
     
     else:
         print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_INVALID_CMD}')

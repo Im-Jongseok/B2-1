@@ -14,7 +14,7 @@ from .models import Transaction
 # ── JSONL 헬퍼 ───────────────────────────────────────────────
 
 def create_jsonl(path: Path) -> None:
-    """파일이 없으면 빈 JSONL 파일을 생성한다."""
+    """파일이 없으면 빈 JSONL 파일을 생성"""
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         path.touch()
@@ -26,7 +26,7 @@ def append_jsonl(path: Path, record: dict) -> None:
 
 
 def read_jsonl(path: Path) -> Generator[dict, None, None]:
-    """파일을 한 줄씩 스트리밍으로 읽는다. 메모리에 전체를 올리지 않는다."""
+    """파일을 한 줄씩 스트리밍으로 읽음"""
     with path.open('r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
@@ -60,18 +60,18 @@ def rewrite_jsonl(path: Path, records: list[dict]) -> None:
 # ── 저장소 ───────────────────────────────────────────────────
 
 class TransactionRepository:
-    """거래 내역의 JSONL 파일 I/O를 담당한다."""
+    """거래 내역의 JSONL 파일 I/O를 담당"""
 
     def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
         self._path = data_dir / Files.TRANSACTIONS
         create_jsonl(self._path)
 
     def stream(self) -> Generator[dict, None, None]:
-        """저장된 거래를 오래된 순서로 스트리밍한다."""
+        """저장된 거래를 오래된 순서로 스트리밍"""
         yield from read_jsonl(self._path)
 
     def generate_id(self) -> str:
-        """현재 최대 ID 번호를 기준으로 다음 ID를 생성한다."""
+        """현재 최대 ID 번호를 기준으로 다음 ID를 생성"""
         max_num = 0
         for record in self.stream():
             try:
@@ -84,6 +84,11 @@ class TransactionRepository:
 
     def add(self, transaction: Transaction) -> None:
         append_jsonl(self._path, transaction.to_dict())
+
+    def delete(self, tx_id: str) -> None:
+        records = list(self.stream())
+        new_records = [r for r in records if r[TxField.ID] != tx_id]
+        rewrite_jsonl(self._path, new_records)
 
     def find(self, tx_id: str) -> dict | None:
         return next((r for r in self.stream() if r[TxField.ID] == tx_id), None)
@@ -98,7 +103,7 @@ class TransactionRepository:
 
 
 class CategoryRepository:
-    """카테고리 목록의 JSONL 파일 I/O를 담당한다."""
+    """카테고리 목록의 JSONL 파일 I/O를 담당"""
 
     def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
         self._path = data_dir / Files.CATEGORIES

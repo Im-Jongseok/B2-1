@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -43,6 +43,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_update = sub.add_parser(CLI.Command.UPDATE, help=CLI.Help.UPDATE)
     p_update.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
 
+    # delete --id <id> (확인 후 삭제)
+    p_delete = sub.add_parser(CLI.Command.DELETE, help=CLI.Help.DELETE)
+    p_delete.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
+
     # category <list|add|remove>
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
@@ -60,6 +64,7 @@ _COMMANDS = {
     CLI.Command.LIST:     cmd_list,
     CLI.Command.SEARCH:   cmd_search,
     CLI.Command.UPDATE:   cmd_update,
+    CLI.Command.DELETE:   cmd_delete,
     CLI.Command.CATEGORY: cmd_category,
 }
 
