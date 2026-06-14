@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 
 from collections import defaultdict
 from datetime import date
@@ -11,6 +12,7 @@ from .constants import (
     Prefix, Msg, Prompt, CLI,
     Confirm, Fmt,
 )
+from .models import Transaction
 from .repository import TransactionRepository, CategoryRepository, BudgetRepository
 from .service import BudgetService
 
@@ -139,7 +141,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     service = BudgetService(args.data_dir)
     tx = _input_tx(service)
     result = service.add_transaction(**tx)
-    print(f'{Prefix.OK.format(Prefix.SAVE)} {Msg.Info.SAVE_OK.format(result.id)}')
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.SAVE_OK.format(result.id)}')
     return 0
 
 
@@ -176,7 +178,7 @@ def cmd_update(args: argparse.Namespace) -> int:
         return 1
 
     tx_repo.update(args.tx_id, fields)
-    print(f'{Prefix.OK.format(Prefix.SAVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
     _print_tx({**record, **fields})
     return 0
 
@@ -202,7 +204,7 @@ def cmd_delete(args: argparse.Namespace) -> int:
 
 
     tx_repo.delete(args.tx_id)
-    print(f'{Prefix.OK.format(Prefix.REMOVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
+    print(f'{Prefix.DONE.format(Prefix.REMOVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
     return 0
 
 
@@ -261,7 +263,7 @@ def cmd_budget(args: argparse.Namespace) -> int:
             return 1
         budget_repo.set(args.month, args.amount)
         print(
-            f'{Prefix.OK.format(Prefix.SAVE)} '
+            f'{Prefix.DONE.format(Prefix.SAVE)} '
             f'{BudgetField.MONTH}{Fmt.KV_SEP}{args.month} '
             f'{BudgetField.AMOUNT}{Fmt.KV_SEP}{args.amount:,}{Fmt.CURRENCY}'
         )
@@ -271,6 +273,37 @@ def cmd_budget(args: argparse.Namespace) -> int:
         return 1
 
     return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    if not args.month and not args.from_date and not args.to_date:
+        print(f'{Prefix.ERROR} {Msg.Error.EXPORT_NO_FILTER}')
+        print(f'{Prefix.HINT} {Msg.Hint.EXPORT_FILTER}')
+        return 1
+
+    tx_repo = TransactionRepository(args.data_dir)
+    results = tx_repo.stream()
+    if args.month:
+        results = (r for r in results if r[TxField.DATE].startswith(args.month))
+    if args.from_date:
+        results = (r for r in results if r[TxField.DATE] >= args.from_date)
+    if args.to_date:
+        results = (r for r in results if r[TxField.DATE] <= args.to_date)
+    records = list(results)
+
+    if not records:
+        print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
+        return 0
+
+    fields = [TxField.ID, TxField.DATE, TxField.TYPE, TxField.AMOUNT, TxField.CATEGORY]
+    with open(args.out, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(records)
+
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {args.out} ({len(records)} records)')
+    return 0
+
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -296,7 +329,7 @@ def cmd_category(args: argparse.Namespace) -> int:
     elif args.category_cmd == CLI.Command.ADD:
         category = _ask_new_category(category_repo)
         category_repo.add(category)
-        print(f'{Prefix.OK.format(Prefix.SAVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
+        print(f'{Prefix.DONE.format(Prefix.SAVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
     
     elif args.category_cmd == CLI.Command.REMOVE:
         tx_repo = TransactionRepository(args.data_dir)
@@ -310,7 +343,7 @@ def cmd_category(args: argparse.Namespace) -> int:
             return 1
 
         category_repo.remove(category)
-        print(f'{Prefix.OK.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
+        print(f'{Prefix.DONE.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
     
     else:
         print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_INVALID_CMD}')

@@ -13,6 +13,7 @@ class Files:
     TRANSACTIONS = 'transactions.jsonl'
     CATEGORIES   = 'categories.jsonl'
     BUDGETS      = 'budgets.jsonl'
+    EXPORT       = 'transactions.csv'
 
 
 class TxType:
@@ -48,7 +49,7 @@ class BudgetField:
 class Prefix:
     ERROR      = '[오류]'
     HINT       = '[힌트]'
-    OK         = '[{} 완료]'
+    DONE         = '[{} 완료]'
     CATEGORIES = '[카테고리 목록]'
     INFO       = '[정보]'
     SAVE           = '저장'
@@ -74,6 +75,8 @@ class Msg:
         NO_CHANGES         = '변경할 항목을 하나 이상 지정하세요.'
         CONFIRM_INVALID    = 'y 또는 n만 입력 가능합니다.'
         BUDGET_INVALID_CMD = 'budget set 명령을 사용하세요.'
+        EXPORT_NO_FILTER   = '--month 또는 --from/--to 조건을 하나 이상 입력하세요.'
+        FILE_NOT_FOUND     = '"{}" 파일을 찾을 수 없습니다.'
 
     class Hint:
         DATE_FORMAT       = '예: 2024-01-15'
@@ -86,6 +89,8 @@ class Msg:
         TX_ID             = '예: TX-000001 (list 명령으로 ID를 확인하세요.)'
         CONFIRM_INVALID   = 'y(삭제) 또는 n(취소)을 입력하세요.'
         BUDGET_INVALID_CMD = '예: budget_app budget set --month 2024-01 --amount 500000'
+        EXPORT_FILTER      = '예: --month 2024-01 또는 --from 2024-01-01 --to 2024-01-31'
+        FILE_NOT_FOUND     = '파일 경로를 확인하세요.'
 
     class Info:
         SAVE_OK           = 'id={}'

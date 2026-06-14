@@ -4,8 +4,8 @@ import argparse
 
 from pathlib import Path
 
-from .constants import DEFAULT_DATA_DIR, CLI
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget, cmd_summary
+from .constants import DEFAULT_DATA_DIR, CLI, Files
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget, cmd_summary, cmd_export
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -59,6 +59,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p_budget_set.add_argument(CLI.Opt.MONTH, dest=CLI.Dest.MONTH, required=True, help=CLI.Help.MONTH)
     p_budget_set.add_argument(CLI.Opt.AMOUNT, type=int, required=True, help=CLI.Help.AMOUNT)
 
+    # export --out FILE [--month YYYY-MM | --from DATE --to DATE]
+    p_export = sub.add_parser(CLI.Command.EXPORT, help=CLI.Help.EXPORT)
+    p_export.add_argument(CLI.Opt.OUT, default=Files.EXPORT, help=CLI.Help.OUT)
+    p_export.add_argument(CLI.Opt.MONTH, dest=CLI.Dest.MONTH, default=None, help=CLI.Help.MONTH)
+    p_export.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_DATE, default=None, help=CLI.Help.FROM_DATE)
+    p_export.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, default=None, help=CLI.Help.TO_DATE)
+
+
     # category <list|add|remove>
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
@@ -79,6 +87,7 @@ _COMMANDS = {
     CLI.Command.DELETE:   cmd_delete,
     CLI.Command.SUMMARY:  cmd_summary,
     CLI.Command.BUDGET:   cmd_budget,
+    CLI.Command.EXPORT:   cmd_export,
     CLI.Command.CATEGORY: cmd_category,
 }
 
