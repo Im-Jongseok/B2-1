@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 
+from collections import defaultdict
 from datetime import date
 from itertools import islice
 
@@ -202,6 +203,51 @@ def cmd_delete(args: argparse.Namespace) -> int:
 
     tx_repo.delete(args.tx_id)
     print(f'{Prefix.OK.format(Prefix.REMOVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
+    return 0
+
+
+def cmd_summary(args: argparse.Namespace) -> int:
+    tx_repo = TransactionRepository(args.data_dir)
+    budget_repo = BudgetRepository(args.data_dir)
+
+    income_total = 0
+    expense_total = 0
+    category_expense: dict = defaultdict(int)
+
+    for r in tx_repo.stream():
+        if not r[TxField.DATE].startswith(args.month):
+            continue
+        if r[TxField.TYPE] == TxType.INCOME:
+            income_total += r[TxField.AMOUNT]
+        else:
+            expense_total += r[TxField.AMOUNT]
+            category_expense[r[TxField.CATEGORY]] += r[TxField.AMOUNT]
+
+    if income_total == 0 and expense_total == 0:
+        print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
+        return 0
+
+    print(f'{Prefix.SUMMARY.format(args.month)}')
+    print(f'{Msg.Info.INCOME_TOTAL}: {income_total:,}{Fmt.CURRENCY}')
+    print(f'{Msg.Info.EXPENSE_TOTAL}: {expense_total:,}{Fmt.CURRENCY}')
+    print(f'{Msg.Info.BALANCE}: {income_total - expense_total:,}{Fmt.CURRENCY}')
+
+    if category_expense:
+        top = sorted(category_expense.items(), key=lambda x: x[1], reverse=True)[:args.top]
+        print(f'\n{Prefix.TOP_EXPENSE.format(args.top)}')
+        for cat, amt in top:
+            print(f'  {cat:<12} {amt:,}{Fmt.CURRENCY}')
+
+    budget = budget_repo.get(args.month)
+    if budget is not None:
+        usage = expense_total / budget * 100
+        print(f'\n{Prefix.BUDGET_SECTION}')
+        print(f'{Msg.Info.BUDGET_AMOUNT}: {budget:,}{Fmt.CURRENCY}')
+        print(f'{Msg.Info.BUDGET_USAGE}: {expense_total:,}{Fmt.CURRENCY} ({usage:.1f}%)')
+        if expense_total > budget:
+            over = expense_total - budget
+            print(f'{Prefix.WARN} {Msg.Warn.BUDGET_EXCEEDED.format(f"{over:,}")}')
+
     return 0
 
 
