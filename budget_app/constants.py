@@ -21,6 +21,7 @@ class TxType:
     ALL        = (INCOME, EXPENSE)
     INCOME_KO  = '수입'
     EXPENSE_KO = '지출'
+    BALANCE_KO = '잔액'
 
 
 class TxId:
@@ -39,14 +40,23 @@ class TxField:
     TAGS     = 'tags'
 
 
+class BudgetField:
+    MONTH  = 'month'
+    AMOUNT = 'amount'
+
+
 class Prefix:
     ERROR      = '[오류]'
     HINT       = '[힌트]'
     OK         = '[{} 완료]'
     CATEGORIES = '[카테고리 목록]'
     INFO       = '[정보]'
-    SAVE       = '저장'
-    REMOVE     = '삭제'
+    SAVE           = '저장'
+    REMOVE         = '삭제'
+    TOP_EXPENSE    = '[카테고리별 지출 TOP {}]'
+    WARN           = '[경고]'
+    SUMMARY        = '=== {} 월별 요약 ==='
+    BUDGET_SECTION = '--- 예산 ---'
 
 
 class Msg:
@@ -63,6 +73,7 @@ class Msg:
         TX_NOT_FOUND       = '"{}" 거래를 찾을 수 없습니다.'
         NO_CHANGES         = '변경할 항목을 하나 이상 지정하세요.'
         CONFIRM_INVALID    = 'y 또는 n만 입력 가능합니다.'
+        BUDGET_INVALID_CMD = 'budget set 명령을 사용하세요.'
 
     class Hint:
         DATE_FORMAT       = '예: 2024-01-15'
@@ -74,11 +85,20 @@ class Msg:
         CATEGORY_INVALID_CMD = '예: budget_app category list'
         TX_ID             = '예: TX-000001 (list 명령으로 ID를 확인하세요.)'
         CONFIRM_INVALID   = 'y(삭제) 또는 n(취소)을 입력하세요.'
+        BUDGET_INVALID_CMD = '예: budget_app budget set --month 2024-01 --amount 500000'
 
     class Info:
         SAVE_OK           = 'id={}'
         NO_DATA           = '데이터 없음'
         DELETE_CANCELLED  = '삭제를 취소했습니다.'
+        INCOME_TOTAL      = '총수입'
+        EXPENSE_TOTAL     = '총지출'
+        BALANCE           = '잔  액'
+        BUDGET_AMOUNT     = '예산'
+        BUDGET_USAGE      = '사용'
+
+    class Warn:
+        BUDGET_EXCEEDED   = '예산을 {}원 초과했습니다!'
 
 
 class Confirm:
@@ -152,6 +172,7 @@ class CLI:
         TX_TYPE        = 'tx_type'
         TX_ID          = 'tx_id'
         FROM_FILE      = 'from_file'
+        MONTH      = 'month'
         BUDGET_CMD = 'budget_cmd'
         CATEGORY_CMD    = 'category_cmd'
 

@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -47,6 +47,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p_delete = sub.add_parser(CLI.Command.DELETE, help=CLI.Help.DELETE)
     p_delete.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
 
+    # budget set --month YYYY-MM --amount N
+    p_budget = sub.add_parser(CLI.Command.BUDGET, help=CLI.Help.BUDGET)
+    budget_sub = p_budget.add_subparsers(dest=CLI.Dest.BUDGET_CMD)
+    p_budget_set = budget_sub.add_parser(CLI.Command.SET, help=CLI.Help.BUDGET_SET)
+    p_budget_set.add_argument(CLI.Opt.MONTH, dest=CLI.Dest.MONTH, required=True, help=CLI.Help.MONTH)
+    p_budget_set.add_argument(CLI.Opt.AMOUNT, type=int, required=True, help=CLI.Help.AMOUNT)
+
     # category <list|add|remove>
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
@@ -65,6 +72,7 @@ _COMMANDS = {
     CLI.Command.SEARCH:   cmd_search,
     CLI.Command.UPDATE:   cmd_update,
     CLI.Command.DELETE:   cmd_delete,
+    CLI.Command.BUDGET:   cmd_budget,
     CLI.Command.CATEGORY: cmd_category,
 }
 

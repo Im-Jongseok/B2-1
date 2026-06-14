@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Generator
 
-from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField
+from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField, BudgetField
 from .models import Transaction
 
 
@@ -130,8 +130,23 @@ class CategoryRepository:
     
     def remove(self, category: str) -> bool:
         records = list(read_jsonl(self._path))
-        # atomic delete
         new_records = [r for r in records if r[TxField.CATEGORY] != category]
-
         rewrite_jsonl(self._path, new_records)
         return True
+
+
+class BudgetRepository:
+    """월별 예산의 JSONL 파일 I/O를 담당"""
+
+    def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
+        self._path = data_dir / Files.BUDGETS
+        create_jsonl(self._path)
+
+    def get(self, month: str) -> int | None:
+        record = next((r for r in read_jsonl(self._path) if r[BudgetField.MONTH] == month), None)
+        return record[BudgetField.AMOUNT] if record else None
+
+    def set(self, month: str, amount: int) -> None:
+        records = [r for r in read_jsonl(self._path) if r[BudgetField.MONTH] != month]
+        records.append({BudgetField.MONTH: month, BudgetField.AMOUNT: amount})
+        rewrite_jsonl(self._path, records)

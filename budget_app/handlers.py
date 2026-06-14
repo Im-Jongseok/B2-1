@@ -6,11 +6,11 @@ from datetime import date
 from itertools import islice
 
 from .constants import (
-    TxType, TxField,
+    TxType, TxField, BudgetField,
     Prefix, Msg, Prompt, CLI,
     Confirm, Fmt,
 )
-from .repository import TransactionRepository, CategoryRepository
+from .repository import TransactionRepository, CategoryRepository, BudgetRepository
 from .service import BudgetService
 
 
@@ -202,6 +202,28 @@ def cmd_delete(args: argparse.Namespace) -> int:
 
     tx_repo.delete(args.tx_id)
     print(f'{Prefix.OK.format(Prefix.REMOVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
+    return 0
+
+
+def cmd_budget(args: argparse.Namespace) -> int:
+    budget_repo = BudgetRepository(args.data_dir)
+
+    if args.budget_cmd == CLI.Command.SET:
+        if args.amount <= 0:
+            print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_POS}')
+            print(f'{Prefix.HINT} {Msg.Hint.AMOUNT}')
+            return 1
+        budget_repo.set(args.month, args.amount)
+        print(
+            f'{Prefix.OK.format(Prefix.SAVE)} '
+            f'{BudgetField.MONTH}{Fmt.KV_SEP}{args.month} '
+            f'{BudgetField.AMOUNT}{Fmt.KV_SEP}{args.amount:,}{Fmt.CURRENCY}'
+        )
+    else:
+        print(f'{Prefix.ERROR} {Msg.Error.BUDGET_INVALID_CMD}')
+        print(f'{Prefix.HINT} {Msg.Hint.BUDGET_INVALID_CMD}')
+        return 1
+
     return 0
 
 
