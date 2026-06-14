@@ -74,6 +74,18 @@ def _ask_amount() -> int:
             print(f'{Prefix.HINT} {Msg.Hint.AMOUNT}')
 
 
+def _ask_update_fields(category_repo: CategoryRepository) -> dict:
+    FIELD_HANDLERS = {
+        TxField.DATE:     _ask_date,
+        TxField.TYPE:     _ask_type,
+        TxField.CATEGORY: lambda: _ask_category(category_repo),
+        TxField.AMOUNT:   _ask_amount,
+    }
+    raw = input(Prompt.UPDATE_FIELDS).strip().lower()
+    selected = [f for f in raw.split() if f in FIELD_HANDLERS]
+    return {field: FIELD_HANDLERS[field]() for field in selected}
+
+
 def _input_tx(svc: BudgetService) -> dict:
     """add 명령에 필요한 필드를 순차적으로 입력받아 dict로 반환한다."""
     return {
@@ -143,13 +155,37 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_update(args: argparse.Namespace) -> int:
+    tx_repo = TransactionRepository(args.data_dir)
+
+    record = tx_repo.find(args.tx_id)
+    if record is None:
+        print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
+        print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
+        return 1
+
+    _print_tx(record)
+
+    category_repo = CategoryRepository(args.data_dir)
+    fields = _ask_update_fields(category_repo)
+
+    if not fields:
+        print(f'{Prefix.ERROR} {Msg.Error.NO_CHANGES}')
+        return 1
+
+    tx_repo.update(args.tx_id, fields)
+    print(f'{Prefix.OK.format(Prefix.SAVE)} id={args.tx_id}')
+    _print_tx({**record, **fields})
+    return 0
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
     records = list(tx_repo.stream())
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
-    for record in islice(reversed(records), args.limit):
+    for record in islice(records, args.limit):
         _print_tx(record)
     return 0
 
@@ -172,7 +208,7 @@ def cmd_category(args: argparse.Namespace) -> int:
         tx_repo = TransactionRepository(args.data_dir)
         category = _ask_category(category_repo)
 
-        # 거래에 카테고리가 사용되고 있어 삭제 차단
+        # (A) 거래에 카테고리가 사용되고 있어 삭제 차단
         has_tx = any(r[TxField.CATEGORY] == category for r in tx_repo.stream())
         if has_tx:
             print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_USED.format(category)}')

@@ -85,6 +85,17 @@ class TransactionRepository:
     def add(self, transaction: Transaction) -> None:
         append_jsonl(self._path, transaction.to_dict())
 
+    def find(self, tx_id: str) -> dict | None:
+        return next((r for r in self.stream() if r[TxField.ID] == tx_id), None)
+
+    def update(self, tx_id: str, fields: dict) -> None:
+        records = list(self.stream())
+        new_records = [
+            {**r, **fields} if r[TxField.ID] == tx_id else r
+            for r in records
+        ]
+        rewrite_jsonl(self._path, new_records)
+
 
 class CategoryRepository:
     """카테고리 목록의 JSONL 파일 I/O를 담당한다."""
@@ -92,7 +103,7 @@ class CategoryRepository:
     def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
         self._path = data_dir / Files.CATEGORIES
         create_jsonl(self._path)
-        # 파일이 비어있으면 기본 카테고리를 자동으로 채운다 (안 A)
+        # (A) 파일이 비어있으면 기본 카테고리를 자동으로 채운다
         if self._is_empty():
             self._init_default()
 

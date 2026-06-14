@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -24,14 +24,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest=CLI.COMMAND_DEST, help=CLI.COMMAND_HELP)
 
-    # add
+    # add (대화형)
     sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
 
-    # list
+    # list [--limit N]
     p_list = sub.add_parser(CLI.Command.LIST, help=CLI.Help.LIST)
     p_list.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
 
-    # search
+    # search [--from DATE] [--to DATE] [--type TYPE] [--category CAT] [--limit N]
     p_search = sub.add_parser(CLI.Command.SEARCH, help=CLI.Help.SEARCH)
     p_search.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_DATE, help=CLI.Help.FROM_DATE)
     p_search.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, help=CLI.Help.TO_DATE)
@@ -39,7 +39,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_search.add_argument(CLI.Opt.CATEGORY, help=CLI.Help.CATEGORY_ARG)
     p_search.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
 
-    # category
+    # update --id <id> (대화형 필드 선택)
+    p_update = sub.add_parser(CLI.Command.UPDATE, help=CLI.Help.UPDATE)
+    p_update.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
+
+    # category <list|add|remove>
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
     category_sub.add_parser(CLI.Command.ADD, help=CLI.Help.CATEGORY_ADD)
@@ -55,6 +59,7 @@ _COMMANDS = {
     CLI.Command.ADD:      cmd_add,
     CLI.Command.LIST:     cmd_list,
     CLI.Command.SEARCH:   cmd_search,
+    CLI.Command.UPDATE:   cmd_update,
     CLI.Command.CATEGORY: cmd_category,
 }
 
