@@ -98,14 +98,48 @@ def _print_tx(r: dict) -> None:
     )
 
 
+# ── 필터 헬퍼 ────────────────────────────────────────────────
+
+def _matches_filter(
+    r: dict,
+    from_date: str | None,
+    to_date: str | None,
+    tx_type: str | None,
+    category: str | None,
+) -> bool:
+    # ISO 날짜 문자열은 사전순 비교로 대소 비교가 가능
+    if from_date and r[TxField.DATE] < from_date:
+        return False
+    if to_date and r[TxField.DATE] > to_date:
+        return False
+    if tx_type and r[TxField.TYPE] != tx_type:
+        return False
+    if category and r[TxField.CATEGORY] != category:
+        return False
+    return True
+
+
 # ── 커맨드 핸들러 ─────────────────────────────────────────────
 
 def cmd_add(args: argparse.Namespace) -> int:
     service = BudgetService(args.data_dir)
     tx = _input_tx(service)
-    
     result = service.add_transaction(**tx)
     print(f'{Prefix.OK.format(Prefix.SAVE)} {Msg.Info.SAVE_OK.format(result.id)}')
+    return 0
+
+
+def cmd_search(args: argparse.Namespace) -> int:
+    tx_repo = TransactionRepository(args.data_dir)
+    records = [
+        r for r in tx_repo.stream()
+        if _matches_filter(r, args.from_date, args.to_date, args.tx_type, args.category)
+    ]
+    if not records:
+        print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
+        return 0
+    for record in records:
+        _print_tx(record)
     return 0
 
 
@@ -118,6 +152,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     for record in islice(reversed(records), args.limit):
         _print_tx(record)
     return 0
+
 
 def cmd_category(args: argparse.Namespace) -> int:
     category_repo = CategoryRepository(args.data_dir)
@@ -144,10 +179,8 @@ def cmd_category(args: argparse.Namespace) -> int:
             print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_USED}')
             return 1
 
-        if category_repo.remove(category):
-            print(f'{Prefix.OK.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}={category}')
-        else:
-            print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_NOT_FOUND.format(category)}')
+        category_repo.remove(category)
+        print(f'{Prefix.OK.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}={category}')
     
     else:
         print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_INVALID_CMD}')

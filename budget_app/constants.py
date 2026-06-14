@@ -162,5 +162,6 @@ class CLI:
         TX_TYPE      = '타입'
         DATE_ARG     = '변경할 날짜'
         TYPE_ARG     = '변경할 타입'
-        CATEGORY_ARG = '변경할 카테고리'
+        CATEGORY_ARG        = '카테고리 필터'
+        CATEGORY_UPDATE_ARG = '변경할 카테고리'
         AMOUNT_ARG   = '변경할 금액'

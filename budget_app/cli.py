@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI
-from .handlers import cmd_add, cmd_list, cmd_category
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -31,6 +31,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p_list = sub.add_parser(CLI.Command.LIST, help=CLI.Help.LIST)
     p_list.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
 
+    # search
+    p_search = sub.add_parser(CLI.Command.SEARCH, help=CLI.Help.SEARCH)
+    p_search.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_DATE, help=CLI.Help.FROM_DATE)
+    p_search.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, help=CLI.Help.TO_DATE)
+    p_search.add_argument(CLI.Opt.TYPE, dest=CLI.Dest.TX_TYPE, help=CLI.Help.TX_TYPE)
+    p_search.add_argument(CLI.Opt.CATEGORY, help=CLI.Help.CATEGORY_ARG)
+    p_search.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
+
     # category
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
@@ -44,8 +52,9 @@ def _build_parser() -> argparse.ArgumentParser:
 # ── 진입점 ───────────────────────────────────────────────────
 
 _COMMANDS = {
-    CLI.Command.ADD:  cmd_add,
-    CLI.Command.LIST: cmd_list,
+    CLI.Command.ADD:      cmd_add,
+    CLI.Command.LIST:     cmd_list,
+    CLI.Command.SEARCH:   cmd_search,
     CLI.Command.CATEGORY: cmd_category,
 }
 
