@@ -7,8 +7,8 @@ import tempfile
 from pathlib import Path
 from typing import Generator
 
-from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField, BudgetField
-from .models import Transaction
+from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField, BudgetField, RecurringField
+from .models import Transaction, RecurringTx
 
 
 # ── JSONL 헬퍼 ───────────────────────────────────────────────
@@ -149,4 +149,40 @@ class BudgetRepository:
     def set(self, month: str, amount: int) -> None:
         records = [r for r in read_jsonl(self._path) if r[BudgetField.MONTH] != month]
         records.append({BudgetField.MONTH: month, BudgetField.AMOUNT: amount})
+        rewrite_jsonl(self._path, records)
+
+
+class RecurringRepository:
+    """반복 내역 템플릿의 JSONL 파일 I/O를 담당"""
+
+    def __init__(self, data_dir: Path = DEFAULT_DATA_DIR) -> None:
+        self._path = data_dir / Files.RECURRING
+        create_jsonl(self._path)
+
+    def stream(self) -> Generator[dict, None, None]:
+        yield from read_jsonl(self._path)
+
+    def generate_id(self) -> str:
+        max_num = 0
+        for r in self.stream():
+            try:
+                num = int(r[RecurringField.ID].split(TxId.SEP)[1])
+                if num > max_num:
+                    max_num = num
+            except (IndexError, ValueError):
+                continue
+        return TxId.RX_FORMAT.format(max_num + 1)
+
+    def add(self, rx: RecurringTx) -> None:
+        append_jsonl(self._path, rx.to_dict())
+
+    def find(self, rx_id: str) -> dict | None:
+        return next((r for r in self.stream() if r[RecurringField.ID] == rx_id), None)
+
+    def update(self, rx_id: str, fields: dict) -> None:
+        records = [{**r, **fields} if r[RecurringField.ID] == rx_id else r for r in self.stream()]
+        rewrite_jsonl(self._path, records)
+
+    def remove(self, rx_id: str) -> None:
+        records = [r for r in self.stream() if r[RecurringField.ID] != rx_id]
         rewrite_jsonl(self._path, records)

@@ -5,7 +5,11 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI, Files
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget, cmd_summary, cmd_export, cmd_import, cmd_backup
+from .handlers import (
+    cmd_add, cmd_list, cmd_apply,
+    cmd_category, cmd_search, cmd_update, cmd_delete,
+    cmd_budget, cmd_summary, cmd_export, cmd_import, cmd_backup,
+)
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -24,25 +28,32 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest=CLI.COMMAND_DEST, help=CLI.COMMAND_HELP)
 
-    # add (대화형)
-    sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
+    # add [--recurring --day N]
+    p_add = sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
+    p_add.add_argument(CLI.Opt.RECURRING, action='store_true', default=False)
+    p_add.add_argument(CLI.Opt.DAY, dest=CLI.Dest.DAY, type=int, default=None)
 
-    # list [--limit N]
+    # list [--limit N] [--recurring]
     p_list = sub.add_parser(CLI.Command.LIST, help=CLI.Help.LIST)
     p_list.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
+    p_list.add_argument(CLI.Opt.RECURRING, action='store_true', default=False)
 
-    # search [--from DATE] [--to DATE] [--type TYPE] [--category CAT] [--limit N]
+    # apply --month YYYY-MM
+    p_apply = sub.add_parser(CLI.Command.APPLY, help=CLI.Help.APPLY)
+    p_apply.add_argument(CLI.Opt.MONTH, dest=CLI.Dest.MONTH, required=True, help=CLI.Help.MONTH)
+
+    # search [--from DATE] [--to DATE] [--type TYPE] [--category CAT]
     p_search = sub.add_parser(CLI.Command.SEARCH, help=CLI.Help.SEARCH)
     p_search.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_DATE, help=CLI.Help.FROM_DATE)
     p_search.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, help=CLI.Help.TO_DATE)
     p_search.add_argument(CLI.Opt.TYPE, dest=CLI.Dest.TX_TYPE, help=CLI.Help.TX_TYPE)
     p_search.add_argument(CLI.Opt.CATEGORY, help=CLI.Help.CATEGORY_ARG)
 
-    # update --id <id> (대화형 필드 선택)
+    # update --id <id>
     p_update = sub.add_parser(CLI.Command.UPDATE, help=CLI.Help.UPDATE)
     p_update.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
 
-    # delete --id <id> (확인 후 삭제)
+    # delete --id <id>
     p_delete = sub.add_parser(CLI.Command.DELETE, help=CLI.Help.DELETE)
     p_delete.add_argument(CLI.Opt.ID, dest=CLI.Dest.TX_ID, required=True, help=CLI.Help.TX_ID)
 
@@ -65,7 +76,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p_export.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_DATE, default=None, help=CLI.Help.FROM_DATE)
     p_export.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, default=None, help=CLI.Help.TO_DATE)
 
-
     # import --from FILE
     p_import = sub.add_parser(CLI.Command.IMPORT, help=CLI.Help.IMPORT)
     p_import.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_FILE, required=True, help=CLI.Help.IMPORT)
@@ -86,17 +96,18 @@ def _build_parser() -> argparse.ArgumentParser:
 # ── 진입점 ───────────────────────────────────────────────────
 
 _COMMANDS = {
-    CLI.Command.ADD:      cmd_add,
-    CLI.Command.LIST:     cmd_list,
-    CLI.Command.SEARCH:   cmd_search,
-    CLI.Command.UPDATE:   cmd_update,
-    CLI.Command.DELETE:   cmd_delete,
-    CLI.Command.SUMMARY:  cmd_summary,
-    CLI.Command.BUDGET:   cmd_budget,
-    CLI.Command.EXPORT:   cmd_export,
-    CLI.Command.IMPORT:   cmd_import,
-    CLI.Command.BACKUP:   cmd_backup,
-    CLI.Command.CATEGORY: cmd_category,
+    CLI.Command.ADD:   cmd_add,
+    CLI.Command.LIST:  cmd_list,
+    CLI.Command.APPLY: cmd_apply,
+    CLI.Command.SEARCH:    cmd_search,
+    CLI.Command.UPDATE:    cmd_update,
+    CLI.Command.DELETE:    cmd_delete,
+    CLI.Command.SUMMARY:   cmd_summary,
+    CLI.Command.BUDGET:    cmd_budget,
+    CLI.Command.EXPORT:    cmd_export,
+    CLI.Command.IMPORT:    cmd_import,
+    CLI.Command.BACKUP:    cmd_backup,
+    CLI.Command.CATEGORY:  cmd_category,
 }
 
 
