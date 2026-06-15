@@ -22,6 +22,9 @@ def handle_errors(func):
         except ValueError as e:
             print(f'{Prefix.ERROR} {e}')
             return 1
+        except EOFError:
+            print(f'\n{Prefix.INFO} {Msg.Info.INTERRUPTED}')
+            return 1
         except KeyboardInterrupt:
             print(f'\n{Prefix.INFO} {Msg.Info.INTERRUPTED}')
             return 0
