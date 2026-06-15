@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .constants import (
-    DEFAULT_DATA_DIR, Files, Msg, TxField, TxType, RecurringField, BudgetField, SummaryKey,
+    DEFAULT_DATA_DIR, Files, Msg, TxField, TxType, RecurringField, SummaryKey,
 )
 from .models import Transaction, RecurringTx
 from .repository import (

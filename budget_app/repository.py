@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Generator
 
 from .constants import DEFAULT_DATA_DIR, DEFAULT_CATEGORIES, Files, TxId, TxField, BudgetField, RecurringField
-from .models import Transaction, RecurringTx
 
 
 # ── JSONL 헬퍼 ───────────────────────────────────────────────
@@ -134,11 +133,10 @@ class CategoryRepository:
     def add(self, category: str) -> None:
         append_jsonl(self._path, {TxField.CATEGORY: category})
 
-    def remove(self, category: str) -> bool:
+    def remove(self, category: str) -> None:
         records = list(read_jsonl(self._path))
         new_records = [r for r in records if r[TxField.CATEGORY] != category]
         rewrite_jsonl(self._path, new_records)
-        return True
 
 
 class BudgetRepository:

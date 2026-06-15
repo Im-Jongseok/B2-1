@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unicodedata
 
-from .constants import TxType, TxField, Fmt, ColHeader, ColWidth
+from .constants import TxType, TxField, RecurringField, Fmt, ColHeader, ColWidth
 
 
 def display_width(s: str) -> int:
@@ -40,3 +40,15 @@ def print_tx_header() -> None:
         f"{rjust_display(ColHeader.AMOUNT, ColWidth.AMOUNT)}"
     )
     print(ColWidth.SEP_LINE)
+
+
+def print_recurring(r: dict) -> None:
+    type_ko = TxType.INCOME_KO if r[RecurringField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
+    day_str = Fmt.MONTHLY_DAY.format(f"{r[RecurringField.DAY]:2}")
+    print(
+        f"{r[RecurringField.ID]}{Fmt.COL_SEP}"
+        f"{day_str}{Fmt.COL_SEP}"
+        f"{type_ko}{Fmt.COL_SEP}"
+        f"{ljust_display(r[RecurringField.CATEGORY], ColWidth.CATEGORY)}{Fmt.COL_SEP}"
+        f"{r[RecurringField.AMOUNT]:,}{Fmt.CURRENCY}"
+    )

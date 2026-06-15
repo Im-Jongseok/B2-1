@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date as _date
-from dataclasses import dataclass, asdict, fields as dc_fields
+from dataclasses import dataclass, asdict
 
 from .constants import TxType, Msg
 
@@ -42,14 +42,6 @@ class Transaction:
 
     def to_dict(self) -> dict:
         return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> Transaction:
-        known = {f.name for f in dc_fields(cls)}
-        try:
-            return cls(**{k: v for k, v in data.items() if k in known})
-        except TypeError as e:
-            raise ValueError(str(e))
 
 
 @dataclass

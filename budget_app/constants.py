@@ -128,6 +128,7 @@ class Msg:
         AFTER            = '[변경 후]'
         BACKUP_OK        = '경로: {}'
         APPLY_RESULT     = '{} 적용: 생성={}'
+        APPLY_SKIPPED    = '중복={}'
 
     class Warn:
         BUDGET_EXCEEDED = '예산을 {}원 초과했습니다!'
@@ -166,12 +167,13 @@ class ColWidth:
 
 
 class Fmt:
-    CURRENCY    = '원'
-    KV_SEP      = '='
-    LIST_SEP    = ', '
-    COL_SEP     = ' | '
-    PERCENT     = '%'
-    MONTHLY_DAY = '매월 {}일'
+    CURRENCY       = '원'
+    KV_SEP         = '='
+    LIST_SEP       = ', '
+    COL_SEP        = ' | '
+    PERCENT        = '%'
+    PERCENT_FACTOR = 100
+    MONTHLY_DAY    = '매월 {}일'
 
 
 class Prompt:

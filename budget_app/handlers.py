@@ -9,7 +9,7 @@ from .constants import (
     Confirm, Fmt, ColWidth,
 )
 from .decorators import handle_errors
-from .formatter import ljust_display, print_tx, print_tx_header
+from .formatter import ljust_display, print_tx, print_tx_header, print_recurring
 from .service import BudgetService
 
 
@@ -36,21 +36,20 @@ def _ask_type() -> str:
         print(f'{Prefix.HINT} {Msg.Hint.TYPE_INVALID}')
 
 
-def _ask_new_category(category_repo) -> str:
+def _ask_new_category(categories: list[str]) -> str:
     while True:
         raw = input(Prompt.CATEGORY).strip().lower()
         if not raw:
             print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_EMPTY}')
             continue
-        if category_repo.exists(raw):
+        if raw in categories:
             print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_ALREADY_EXIST.format(raw)}')
             print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_LIST}')
             continue
         return raw
 
 
-def _ask_category(category_repo) -> str:
-    categories = category_repo.list_categories()
+def _ask_category(categories: list[str]) -> str:
     while True:
         print(f'{Prefix.CATEGORIES} {Fmt.LIST_SEP.join(categories)}')
         raw = input(Prompt.CATEGORY).strip().lower()
@@ -89,11 +88,11 @@ def _ask_day() -> int:
             print(f'{Prefix.HINT} {Msg.Hint.DAY}')
 
 
-def _ask_update_recurring_fields(category_repo) -> dict:
+def _ask_update_recurring_fields(categories: list[str]) -> dict:
     FIELD_HANDLERS = {
         RecurringField.TYPE:     _ask_type,
         RecurringField.DAY:      _ask_day,
-        RecurringField.CATEGORY: lambda: _ask_category(category_repo),
+        RecurringField.CATEGORY: lambda: _ask_category(categories),
         RecurringField.AMOUNT:   _ask_amount,
     }
     raw = input(Prompt.UPDATE_RECURRING_FIELDS).strip().lower()
@@ -105,11 +104,11 @@ def _ask_update_recurring_fields(category_repo) -> dict:
     return {field: FIELD_HANDLERS[field]() for field in selected}
 
 
-def _ask_update_fields(category_repo) -> dict:
+def _ask_update_fields(categories: list[str]) -> dict:
     FIELD_HANDLERS = {
         TxField.DATE:     _ask_date,
         TxField.TYPE:     _ask_type,
-        TxField.CATEGORY: lambda: _ask_category(category_repo),
+        TxField.CATEGORY: lambda: _ask_category(categories),
         TxField.AMOUNT:   _ask_amount,
     }
     raw = input(Prompt.UPDATE_FIELDS).strip().lower()
@@ -125,7 +124,7 @@ def _input_tx(svc: BudgetService) -> dict:
     return {
         TxField.DATE:     _ask_date(),
         TxField.TYPE:     _ask_type(),
-        TxField.CATEGORY: _ask_category(svc.category_repo),
+        TxField.CATEGORY: _ask_category(svc.list_categories()),
         TxField.AMOUNT:   _ask_amount(),
     }
 
@@ -165,20 +164,6 @@ def _run_delete(record: dict, print_fn, delete_fn, id_field: str, id_val: str) -
     return 0
 
 
-# ── 반복 내역 헬퍼 ────────────────────────────────────────────────
-
-def _print_recurring(r: dict) -> None:
-    type_ko = TxType.INCOME_KO if r[RecurringField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
-    day_str = Fmt.MONTHLY_DAY.format(f"{r[RecurringField.DAY]:2}")
-    print(
-        f"{r[RecurringField.ID]}{Fmt.COL_SEP}"
-        f"{day_str}{Fmt.COL_SEP}"
-        f"{type_ko}{Fmt.COL_SEP}"
-        f"{ljust_display(r[RecurringField.CATEGORY], 12)}{Fmt.COL_SEP}"
-        f"{r[RecurringField.AMOUNT]:,}{Fmt.CURRENCY}"
-    )
-
-
 # ── 커맨드 핸들러 ─────────────────────────────────────────────────
 
 @handle_errors
@@ -186,11 +171,11 @@ def cmd_add(args: argparse.Namespace) -> int:
     svc = BudgetService(args.data_dir)
     if args.recurring:
         tx_type  = _ask_type()
-        category = _ask_category(svc.category_repo)
+        category = _ask_category(svc.list_categories())
         day      = _ask_day()
         amount   = _ask_amount()
         rx = svc.add_recurring(tx_type, day, category, amount)
-        _print_recurring(rx.to_dict())
+        print_recurring(rx.to_dict())
         return 0
     tx = _input_tx(svc)
     result = svc.add_transaction(**tx)
@@ -211,7 +196,7 @@ def cmd_list(args: argparse.Namespace) -> int:
             return 0
         print(f'{Prefix.INFO} {Msg.Info.COUNT.format(len(records))}')
         for r in records:
-            _print_recurring(r)
+            print_recurring(r)
         return 0
 
     records = svc.list_transactions()
@@ -231,7 +216,7 @@ def cmd_apply(args: argparse.Namespace) -> int:
     created, skipped = svc.apply_recurring(args.month)
     msg = Msg.Info.APPLY_RESULT.format(args.month, created)
     if skipped:
-        msg += f', 중복={skipped}'
+        msg += f', {Msg.Info.APPLY_SKIPPED.format(skipped)}'
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {msg}')
     return 0
 
@@ -260,8 +245,8 @@ def cmd_update(args: argparse.Namespace) -> int:
             print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
             print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
             return 1
-        return _run_update(record, _print_recurring,
-                           lambda: _ask_update_recurring_fields(svc.category_repo),
+        return _run_update(record, print_recurring,
+                           lambda: _ask_update_recurring_fields(svc.list_categories()),
                            svc.update_recurring, RecurringField.ID, args.tx_id)
 
     record = svc.find_transaction(args.tx_id)
@@ -270,7 +255,7 @@ def cmd_update(args: argparse.Namespace) -> int:
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
     return _run_update(record, print_tx,
-                       lambda: _ask_update_fields(svc.category_repo),
+                       lambda: _ask_update_fields(svc.list_categories()),
                        svc.update_transaction, TxField.ID, args.tx_id)
 
 
@@ -284,7 +269,7 @@ def cmd_delete(args: argparse.Namespace) -> int:
             print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
             print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
             return 1
-        return _run_delete(record, _print_recurring,
+        return _run_delete(record, print_recurring,
                            svc.delete_recurring, RecurringField.ID, args.tx_id)
 
     record = svc.find_transaction(args.tx_id)
@@ -313,11 +298,11 @@ def cmd_summary(args: argparse.Namespace) -> int:
     if data[SummaryKey.TOP_EXPENSE]:
         print(f'\n{Prefix.TOP_EXPENSE.format(args.top)}')
         for i, (cat, amt) in enumerate(data[SummaryKey.TOP_EXPENSE], 1):
-            print(f'{i}) {ljust_display(cat, 12)} {amt:,}{Fmt.CURRENCY}')
+            print(f'{i}) {ljust_display(cat, ColWidth.CATEGORY)} {amt:,}{Fmt.CURRENCY}')
 
     budget = data[SummaryKey.BUDGET]
     if budget is not None:
-        usage = data[SummaryKey.EXPENSE_TOTAL] / budget * 100
+        usage = data[SummaryKey.EXPENSE_TOTAL] / budget * Fmt.PERCENT_FACTOR
         print(f'\n{Prefix.BUDGET_SECTION}')
         print(f'{Msg.Info.BUDGET_AMOUNT}: {budget:,}{Fmt.CURRENCY}')
         print(f'{Msg.Info.BUDGET_USAGE}: {data[SummaryKey.EXPENSE_TOTAL]:,}{Fmt.CURRENCY} ({usage:.1f}{Fmt.PERCENT})')
@@ -395,12 +380,12 @@ def cmd_category(args: argparse.Namespace) -> int:
             print(f'{i}. {c}')
 
     elif args.category_cmd == CLI.Command.ADD:
-        category = _ask_new_category(svc.category_repo)
+        category = _ask_new_category(svc.list_categories())
         svc.add_category(category)
         print(f'{Prefix.DONE.format(Prefix.SAVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
 
     elif args.category_cmd == CLI.Command.REMOVE:
-        category = _ask_category(svc.category_repo)
+        category = _ask_category(svc.list_categories())
         svc.remove_category(category)
         print(f'{Prefix.DONE.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
 
