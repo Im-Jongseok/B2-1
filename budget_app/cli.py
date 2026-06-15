@@ -37,7 +37,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p_search.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, help=CLI.Help.TO_DATE)
     p_search.add_argument(CLI.Opt.TYPE, dest=CLI.Dest.TX_TYPE, help=CLI.Help.TX_TYPE)
     p_search.add_argument(CLI.Opt.CATEGORY, help=CLI.Help.CATEGORY_ARG)
-    p_search.add_argument(CLI.Opt.LIMIT, type=int, default=CLI.Default.LIMIT, help=CLI.Help.LIMIT)
 
     # update --id <id> (대화형 필드 선택)
     p_update = sub.add_parser(CLI.Command.UPDATE, help=CLI.Help.UPDATE)

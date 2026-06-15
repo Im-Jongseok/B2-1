@@ -107,6 +107,9 @@ class Msg:
         EXPORT_RESULT     = '({} records)'
         IMPORT_IMPORTED   = 'imported'
         IMPORT_SKIPPED    = 'skipped'
+        COUNT             = '총 {}건'
+        BEFORE            = '[변경 전]'
+        AFTER             = '[변경 후]'
 
     class Warn:
         BUDGET_EXCEEDED   = '예산을 {}원 초과했습니다!'

@@ -10,10 +10,10 @@ from itertools import islice
 from .constants import (
     TxType, TxField, BudgetField,
     Prefix, Msg, Prompt, CLI,
-    Confirm, Fmt,
+    Confirm, Fmt, ColWidth
 )
 from .decorators import handle_errors
-from .formatter import print_tx, print_tx_header
+from .formatter import ljust_display, print_tx, print_tx_header
 from .models import Transaction
 from .repository import TransactionRepository, CategoryRepository, BudgetRepository
 from .service import BudgetService
@@ -132,6 +132,9 @@ def cmd_add(args: argparse.Namespace) -> int:
     tx = _input_tx(service)
     result = service.add_transaction(**tx)
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.SAVE_OK.format(result.id)}')
+    print(ColWidth.SEP_LINE)
+    print_tx(result.to_dict())
+    print(ColWidth.SEP_LINE)
     return 0
 
 
@@ -145,6 +148,7 @@ def cmd_search(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
+    print(f'{Prefix.INFO} {Msg.Info.COUNT.format(len(records))}')
     print_tx_header()
     for record in reversed(records):
         print_tx(record)
@@ -161,7 +165,10 @@ def cmd_update(args: argparse.Namespace) -> int:
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
 
+    print(f'{Msg.Info.BEFORE}')
+    print(ColWidth.SEP_LINE)
     print_tx(record)
+    print(ColWidth.SEP_LINE)
 
     category_repo = CategoryRepository(args.data_dir)
     fields = _ask_update_fields(category_repo)
@@ -172,7 +179,10 @@ def cmd_update(args: argparse.Namespace) -> int:
 
     tx_repo.update(args.tx_id, fields)
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
+    print(f'{Msg.Info.AFTER}')
+    print(ColWidth.SEP_LINE)
     print_tx({**record, **fields})
+    print(ColWidth.SEP_LINE)
     return 0
 
 
@@ -232,8 +242,8 @@ def cmd_summary(args: argparse.Namespace) -> int:
     if category_expense:
         top = sorted(category_expense.items(), key=lambda x: x[1], reverse=True)[:args.top]
         print(f'\n{Prefix.TOP_EXPENSE.format(args.top)}')
-        for cat, amt in top:
-            print(f'  {cat:<12} {amt:,}{Fmt.CURRENCY}')
+        for i, (cat, amt) in enumerate(top, 1):
+            print(f'{i}) {ljust_display(cat, 12)} {amt:,}{Fmt.CURRENCY}')
 
     budget = budget_repo.get(args.month)
     if budget is not None:
@@ -347,6 +357,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
+    print(f'{Prefix.INFO} {Msg.Info.COUNT.format(len(records))}')
     print_tx_header()
     for record in islice(reversed(records), args.limit):
         print_tx(record)
@@ -360,8 +371,8 @@ def cmd_category(args: argparse.Namespace) -> int:
     if args.category_cmd == CLI.Command.LIST:
         categories = category_repo.list_categories()
         print(f'{Prefix.CATEGORIES} ({len(categories)})')
-        for c in categories:
-            print(f'{c}')
+        for i, c in enumerate(categories, 1):
+            print(f'{i}. {c}')
 
     elif args.category_cmd == CLI.Command.ADD:
         category = _ask_new_category(category_repo)
