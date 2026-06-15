@@ -10,10 +10,12 @@ DEFAULT_CATEGORIES = [
 
 
 class Files:
-    TRANSACTIONS = 'transactions.jsonl'
-    CATEGORIES   = 'categories.jsonl'
-    BUDGETS      = 'budgets.jsonl'
-    EXPORT       = 'transactions.csv'
+    TRANSACTIONS   = 'transactions.jsonl'
+    CATEGORIES     = 'categories.jsonl'
+    BUDGETS        = 'budgets.jsonl'
+    EXPORT         = 'transactions.csv'
+    BACKUP_DIR     = 'backup'
+    BACKUP_TS_FMT  = '%Y%m%d_%H%M%S'
 
 
 class TxType:
@@ -54,6 +56,7 @@ class Prefix:
     INFO       = '[정보]'
     SAVE           = '저장'
     REMOVE         = '삭제'
+    BACKUP         = '백업'
     TOP_EXPENSE    = '[카테고리별 지출 TOP {}]'
     WARN           = '[경고]'
     SUMMARY        = '=== {} 월별 요약 ==='
@@ -110,6 +113,7 @@ class Msg:
         COUNT             = '총 {}건'
         BEFORE            = '[변경 전]'
         AFTER             = '[변경 후]'
+        BACKUP_OK         = '경로: {}'
 
     class Warn:
         BUDGET_EXCEEDED   = '예산을 {}원 초과했습니다!'
@@ -179,6 +183,7 @@ class CLI:
         IMPORT   = 'import'
         SET      = 'set'
         REMOVE   = 'remove'
+        BACKUP   = 'backup'
 
     class Default:
         LIMIT = 10
@@ -226,6 +231,7 @@ class CLI:
         DELETE       = '거래 삭제'
         EXPORT       = 'CSV 내보내기'
         IMPORT       = 'CSV 가져오기'
+        BACKUP       = '데이터 백업'
         LIMIT        = '표시 건수 (기본: 10)'
         TOP          = 'TOP N (기본: 5)'
         MONTH        = 'YYYY-MM'

@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import argparse
 import csv
+import shutil
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from itertools import islice
 
 from .constants import (
     TxType, TxField, BudgetField,
     Prefix, Msg, Prompt, CLI,
-    Confirm, Fmt, ColWidth
+    Confirm, Fmt, ColWidth, Files,
 )
 from .decorators import handle_errors
 from .formatter import ljust_display, print_tx, print_tx_header
@@ -351,6 +352,21 @@ def cmd_import(args: argparse.Namespace) -> int:
             imported += 1
 
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.IMPORT_IMPORTED}{Fmt.KV_SEP}{imported}{Fmt.LIST_SEP}{Msg.Info.IMPORT_SKIPPED}{Fmt.KV_SEP}{skipped}')
+    return 0
+
+
+@handle_errors
+def cmd_backup(args: argparse.Namespace) -> int:
+    timestamp  = datetime.now().strftime(Files.BACKUP_TS_FMT)
+    backup_dir = args.data_dir / Files.BACKUP_DIR / timestamp
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    for filename in [Files.TRANSACTIONS, Files.CATEGORIES, Files.BUDGETS]:
+        src = args.data_dir / filename
+        if src.exists():
+            shutil.copy2(src, backup_dir / filename)
+
+    print(f'{Prefix.DONE.format(Prefix.BACKUP)} {Msg.Info.BACKUP_OK.format(backup_dir)}')
     return 0
 
 
