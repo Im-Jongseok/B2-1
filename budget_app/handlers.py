@@ -88,7 +88,11 @@ def _ask_update_fields(category_repo: CategoryRepository) -> dict:
         TxField.AMOUNT:   _ask_amount,
     }
     raw = input(Prompt.UPDATE_FIELDS).strip().lower()
-    selected = [f for f in raw.split() if f in FIELD_HANDLERS]
+    tokens = raw.split()
+    selected = [f for f in tokens if f in FIELD_HANDLERS]
+    unknown = [f for f in tokens if f not in FIELD_HANDLERS]
+    if unknown:
+        print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
     return {field: FIELD_HANDLERS[field]() for field in selected}
 
 

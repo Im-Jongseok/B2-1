@@ -113,6 +113,7 @@ class Msg:
 
     class Warn:
         BUDGET_EXCEEDED   = '예산을 {}원 초과했습니다!'
+        UNKNOWN_FIELD     = '알 수 없는 필드 무시됨: {}'
 
 
 class Confirm:
