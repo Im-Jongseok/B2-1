@@ -101,6 +101,9 @@ class Msg:
         BALANCE           = '잔  액'
         BUDGET_AMOUNT     = '예산'
         BUDGET_USAGE      = '사용'
+        EXPORT_RESULT     = '({} records)'
+        IMPORT_IMPORTED   = 'imported'
+        IMPORT_SKIPPED    = 'skipped'
 
     class Warn:
         BUDGET_EXCEEDED   = '예산을 {}원 초과했습니다!'
@@ -115,6 +118,8 @@ class Fmt:
     CURRENCY  = '원'
     KV_SEP    = '='
     LIST_SEP  = ', '
+    COL_SEP   = ' | '
+    PERCENT   = '%'
 
 
 class Prompt:

@@ -106,10 +106,10 @@ def _print_tx(r: dict) -> None:
     tx_type = TxType.INCOME_KO if r[TxField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
     amount_str = f"{r[TxField.AMOUNT]:,}{Fmt.CURRENCY}"
     print(
-        f"{r[TxField.ID]} | "
-        f"{r[TxField.DATE]} | "
-        f"{tx_type} | "
-        f"{r[TxField.CATEGORY]:<12} | "
+        f"{r[TxField.ID]}{Fmt.COL_SEP}"
+        f"{r[TxField.DATE]}{Fmt.COL_SEP}"
+        f"{tx_type}{Fmt.COL_SEP}"
+        f"{r[TxField.CATEGORY]:<12}{Fmt.COL_SEP}"
         f"{amount_str:>12}"
     )
 
@@ -245,7 +245,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
         usage = expense_total / budget * 100
         print(f'\n{Prefix.BUDGET_SECTION}')
         print(f'{Msg.Info.BUDGET_AMOUNT}: {budget:,}{Fmt.CURRENCY}')
-        print(f'{Msg.Info.BUDGET_USAGE}: {expense_total:,}{Fmt.CURRENCY} ({usage:.1f}%)')
+        print(f'{Msg.Info.BUDGET_USAGE}: {expense_total:,}{Fmt.CURRENCY} ({usage:.1f}{Fmt.PERCENT})')
         if expense_total > budget:
             over = expense_total - budget
             print(f'{Prefix.WARN} {Msg.Warn.BUDGET_EXCEEDED.format(f"{over:,}")}')
@@ -301,9 +301,52 @@ def cmd_export(args: argparse.Namespace) -> int:
         writer.writeheader()
         writer.writerows(records)
 
-    print(f'{Prefix.DONE.format(Prefix.SAVE)} {args.out} ({len(records)} records)')
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {args.out} {Msg.Info.EXPORT_RESULT.format(len(records))}')
     return 0
 
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    try:
+        f = open(args.from_file, 'r', newline='', encoding='utf-8')
+    except FileNotFoundError:
+        print(f'{Prefix.ERROR} {Msg.Error.FILE_NOT_FOUND.format(args.from_file)}')
+        print(f'{Prefix.HINT} {Msg.Hint.FILE_NOT_FOUND}')
+        return 1
+
+    tx_repo = TransactionRepository(args.data_dir)
+    category_repo = CategoryRepository(args.data_dir)
+    existing_ids = {r[TxField.ID] for r in tx_repo.stream()}
+    imported = 0
+    skipped = 0
+
+    with f:
+        for row in csv.DictReader(f):
+            try:
+                if row[TxField.CATEGORY] not in category_repo.list_categories():
+                    skipped += 1
+                    continue
+                tx = Transaction(
+                    id=row[TxField.ID],
+                    date=row[TxField.DATE],
+                    type=row[TxField.TYPE],
+                    amount=int(row[TxField.AMOUNT]),
+                    category=row[TxField.CATEGORY],
+                )
+            except (ValueError, KeyError):
+                skipped += 1
+                continue
+
+            if tx.id in existing_ids:
+                skipped += 1
+                continue
+
+            tx_repo.add(tx)
+            existing_ids.add(tx.id)
+            imported += 1
+
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.IMPORT_IMPORTED}{Fmt.KV_SEP}{imported}{Fmt.LIST_SEP}{Msg.Info.IMPORT_SKIPPED}{Fmt.KV_SEP}{skipped}')
+    return 0
 
 
 def cmd_list(args: argparse.Namespace) -> int:

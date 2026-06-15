@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .constants import DEFAULT_DATA_DIR, CLI, Files
-from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget, cmd_summary, cmd_export
+from .handlers import cmd_add, cmd_list, cmd_category, cmd_search, cmd_update, cmd_delete, cmd_budget, cmd_summary, cmd_export, cmd_import
 
 
 # ── Parser ───────────────────────────────────────────────────
@@ -67,6 +67,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_export.add_argument(CLI.Opt.TO, dest=CLI.Dest.TO_DATE, default=None, help=CLI.Help.TO_DATE)
 
 
+    # import --from FILE
+    p_import = sub.add_parser(CLI.Command.IMPORT, help=CLI.Help.IMPORT)
+    p_import.add_argument(CLI.Opt.FROM, dest=CLI.Dest.FROM_FILE, required=True, help=CLI.Help.IMPORT)
+
     # category <list|add|remove>
     p_category = sub.add_parser(CLI.Command.CATEGORY, help=CLI.Help.CATEGORY)
     category_sub = p_category.add_subparsers(dest=CLI.Dest.CATEGORY_CMD)
@@ -88,6 +92,7 @@ _COMMANDS = {
     CLI.Command.SUMMARY:  cmd_summary,
     CLI.Command.BUDGET:   cmd_budget,
     CLI.Command.EXPORT:   cmd_export,
+    CLI.Command.IMPORT:   cmd_import,
     CLI.Command.CATEGORY: cmd_category,
 }
 
