@@ -1,9 +1,26 @@
 from __future__ import annotations
 
-from datetime import date
-from dataclasses import dataclass, asdict
+from datetime import date as _date
+from dataclasses import dataclass, asdict, fields as dc_fields
 
-from .constants import TxType, TxField, RecurringField, Msg
+from .constants import TxType, Msg
+
+
+def _validate_type(type: str) -> None:
+    if type not in TxType.ALL:
+        raise ValueError(Msg.Error.TYPE_INVALID)
+
+
+def _validate_amount(amount: int) -> None:
+    if isinstance(amount, bool) or not isinstance(amount, int):
+        raise ValueError(Msg.Error.AMOUNT_NOT_NUM)
+    if amount <= 0:
+        raise ValueError(Msg.Error.AMOUNT_NOT_POS)
+
+
+def _validate_category(category: str) -> None:
+    if not category:
+        raise ValueError(Msg.Error.CATEGORY_EMPTY)
 
 
 @dataclass
@@ -13,24 +30,26 @@ class Transaction:
     date: str       # YYYY-MM-DD
     amount: int     # 양수
     category: str
+
     def __post_init__(self) -> None:
-        if self.type not in TxType.ALL:
-            raise ValueError(Msg.Error.TYPE_INVALID)
+        _validate_type(self.type)
+        _validate_amount(self.amount)
+        _validate_category(self.category)
         try:
-            date.fromisoformat(self.date)
+            _date.fromisoformat(self.date)
         except (ValueError, TypeError):
             raise ValueError(Msg.Error.DATE_FORMAT)
-        if not isinstance(self.amount, int) or self.amount <= 0:
-            raise ValueError(Msg.Error.AMOUNT_NOT_POS)
-        if not self.category:
-            raise ValueError(Msg.Error.CATEGORY_EMPTY)
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> Transaction:
-        return cls(**data)
+        known = {f.name for f in dc_fields(cls)}
+        try:
+            return cls(**{k: v for k, v in data.items() if k in known})
+        except TypeError as e:
+            raise ValueError(str(e))
 
 
 @dataclass
@@ -42,14 +61,13 @@ class RecurringTx:
     amount: int
 
     def __post_init__(self) -> None:
-        if self.type not in TxType.ALL:
-            raise ValueError(Msg.Error.TYPE_INVALID)
-        if not isinstance(self.day, int) or not (1 <= self.day <= 31):
+        _validate_type(self.type)
+        _validate_amount(self.amount)
+        _validate_category(self.category)
+        if isinstance(self.day, bool) or not isinstance(self.day, int):
             raise ValueError(Msg.Error.DAY_INVALID)
-        if not isinstance(self.amount, int) or self.amount <= 0:
-            raise ValueError(Msg.Error.AMOUNT_NOT_POS)
-        if not self.category:
-            raise ValueError(Msg.Error.CATEGORY_EMPTY)
+        if not (1 <= self.day <= 31):
+            raise ValueError(Msg.Error.DAY_INVALID)
 
     def to_dict(self) -> dict:
         return asdict(self)
