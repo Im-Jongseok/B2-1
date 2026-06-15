@@ -44,6 +44,9 @@ class BudgetService:
         return self.tx_repo.find(tx_id)
 
     def update_transaction(self, tx_id: str, fields: dict) -> None:
+        record = self.tx_repo.find(tx_id)
+        if record:
+            Transaction(**{**record, **fields})  # 병합 결과를 모델로 검증
         self.tx_repo.update(tx_id, fields)
 
     def delete_transaction(self, tx_id: str) -> None:
@@ -75,12 +78,16 @@ class BudgetService:
         return self.rx_repo.find(rx_id)
 
     def update_recurring(self, rx_id: str, fields: dict) -> None:
+        record = self.rx_repo.find(rx_id)
+        if record:
+            RecurringTx(**{**record, **fields})  # 병합 결과를 모델로 검증
         self.rx_repo.update(rx_id, fields)
 
     def delete_recurring(self, rx_id: str) -> None:
         self.rx_repo.remove(rx_id)
 
     def apply_recurring(self, month: str) -> tuple[int, int]:
+        _validate_month(month)
         year, month_num = int(month[:4]), int(month[5:])
         last_day = calendar.monthrange(year, month_num)[1]
 
@@ -136,6 +143,7 @@ class BudgetService:
         return self.budget_repo.get(month)
 
     def set_budget(self, month: str, amount: int) -> None:
+        _validate_month(month)
         if amount <= 0:
             raise ValueError(Msg.Error.AMOUNT_NOT_POS)
         self.budget_repo.set(month, amount)
@@ -143,6 +151,7 @@ class BudgetService:
     # ── 요약 ──────────────────────────────────────────────────────────
 
     def get_summary(self, month: str, top: int) -> dict:
+        _validate_month(month)
         income_total = 0
         expense_total = 0
         category_expense: dict[str, int] = {}
@@ -174,6 +183,8 @@ class BudgetService:
         from_date: str | None = None,
         to_date: str | None = None,
     ) -> int:
+        if month:
+            _validate_month(month)
         stream = self.tx_repo.stream()
         if month:
             stream = (r for r in stream if r[TxField.DATE].startswith(month))
@@ -237,6 +248,17 @@ class BudgetService:
                 shutil.copy2(src, backup_dir / filename)
 
         return backup_dir
+
+
+def _validate_month(month: str) -> None:
+    valid = len(month) == 7
+    if valid:
+        try:
+            datetime.strptime(month, '%Y-%m')
+        except ValueError:
+            valid = False
+    if not valid:
+        raise ValueError(Msg.Error.MONTH_FORMAT.format(month))
 
 
 def _matches_filter(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from itertools import islice
+from typing import Callable, NamedTuple
 
 from .constants import (
     TxType, TxField, TxId, BudgetField, RecurringField, SummaryKey,
@@ -11,6 +12,12 @@ from .constants import (
 from .decorators import handle_errors
 from .formatter import ljust_display, print_tx, print_tx_header, print_recurring
 from .service import BudgetService
+
+
+def _error(msg: str, hint: str | None = None) -> None:
+    print(f'{Prefix.ERROR} {msg}')
+    if hint:
+        print(f'{Prefix.HINT} {hint}')
 
 
 # ── 대화형 입력 헬퍼 ─────────────────────────────────────────────
@@ -23,8 +30,7 @@ def _ask_date() -> str:
             _date.fromisoformat(raw)
             return raw
         except ValueError:
-            print(f'{Prefix.ERROR} {Msg.Error.DATE_FORMAT}')
-            print(f'{Prefix.HINT} {Msg.Hint.DATE_FORMAT}')
+            _error(Msg.Error.DATE_FORMAT, Msg.Hint.DATE_FORMAT)
 
 
 def _ask_type() -> str:
@@ -32,19 +38,17 @@ def _ask_type() -> str:
         raw = input(Prompt.TYPE).strip().lower()
         if raw in TxType.ALL:
             return raw
-        print(f'{Prefix.ERROR} {Msg.Error.TYPE_INVALID}')
-        print(f'{Prefix.HINT} {Msg.Hint.TYPE_INVALID}')
+        _error(Msg.Error.TYPE_INVALID, Msg.Hint.TYPE_INVALID)
 
 
 def _ask_new_category(categories: list[str]) -> str:
     while True:
         raw = input(Prompt.CATEGORY).strip().lower()
         if not raw:
-            print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_EMPTY}')
+            _error(Msg.Error.CATEGORY_EMPTY)
             continue
         if raw in categories:
-            print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_ALREADY_EXIST.format(raw)}')
-            print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_LIST}')
+            _error(Msg.Error.CATEGORY_ALREADY_EXIST.format(raw), Msg.Hint.CATEGORY_LIST)
             continue
         return raw
 
@@ -55,8 +59,7 @@ def _ask_category(categories: list[str]) -> str:
         raw = input(Prompt.CATEGORY).strip().lower()
         if raw in categories:
             return raw
-        print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_NOT_FOUND.format(raw)}')
-        print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_ADD}')
+        _error(Msg.Error.CATEGORY_NOT_FOUND.format(raw), Msg.Hint.CATEGORY_ADD)
 
 
 def _ask_amount() -> int:
@@ -65,13 +68,11 @@ def _ask_amount() -> int:
         try:
             amount = int(raw)
             if amount <= 0:
-                print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_POS}')
-                print(f'{Prefix.HINT} {Msg.Hint.AMOUNT}')
+                _error(Msg.Error.AMOUNT_NOT_POS, Msg.Hint.AMOUNT)
                 continue
             return amount
         except ValueError:
-            print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_NUM}')
-            print(f'{Prefix.HINT} {Msg.Hint.AMOUNT}')
+            _error(Msg.Error.AMOUNT_NOT_NUM, Msg.Hint.AMOUNT)
 
 
 def _ask_day() -> int:
@@ -81,43 +82,37 @@ def _ask_day() -> int:
             day = int(raw)
             if 1 <= day <= 31:
                 return day
-            print(f'{Prefix.ERROR} {Msg.Error.DAY_INVALID}')
-            print(f'{Prefix.HINT} {Msg.Hint.DAY}')
+            _error(Msg.Error.DAY_INVALID, Msg.Hint.DAY)
         except ValueError:
-            print(f'{Prefix.ERROR} {Msg.Error.DAY_INVALID}')
-            print(f'{Prefix.HINT} {Msg.Hint.DAY}')
+            _error(Msg.Error.DAY_INVALID, Msg.Hint.DAY)
+
+
+def _ask_fields(prompt: str, field_handlers: dict) -> dict:
+    raw = input(prompt).strip().lower()
+    tokens = raw.split()
+    selected = [f for f in tokens if f in field_handlers]
+    unknown  = [f for f in tokens if f not in field_handlers]
+    if unknown:
+        print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
+    return {field: field_handlers[field]() for field in selected}
 
 
 def _ask_update_recurring_fields(categories: list[str]) -> dict:
-    FIELD_HANDLERS = {
+    return _ask_fields(Prompt.UPDATE_RECURRING_FIELDS, {
         RecurringField.TYPE:     _ask_type,
         RecurringField.DAY:      _ask_day,
         RecurringField.CATEGORY: lambda: _ask_category(categories),
         RecurringField.AMOUNT:   _ask_amount,
-    }
-    raw = input(Prompt.UPDATE_RECURRING_FIELDS).strip().lower()
-    tokens = raw.split()
-    selected = [f for f in tokens if f in FIELD_HANDLERS]
-    unknown  = [f for f in tokens if f not in FIELD_HANDLERS]
-    if unknown:
-        print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
-    return {field: FIELD_HANDLERS[field]() for field in selected}
+    })
 
 
 def _ask_update_fields(categories: list[str]) -> dict:
-    FIELD_HANDLERS = {
+    return _ask_fields(Prompt.UPDATE_FIELDS, {
         TxField.DATE:     _ask_date,
         TxField.TYPE:     _ask_type,
         TxField.CATEGORY: lambda: _ask_category(categories),
         TxField.AMOUNT:   _ask_amount,
-    }
-    raw = input(Prompt.UPDATE_FIELDS).strip().lower()
-    tokens = raw.split()
-    selected = [f for f in tokens if f in FIELD_HANDLERS]
-    unknown  = [f for f in tokens if f not in FIELD_HANDLERS]
-    if unknown:
-        print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
-    return {field: FIELD_HANDLERS[field]() for field in selected}
+    })
 
 
 def _input_tx(svc: BudgetService) -> dict:
@@ -138,7 +133,7 @@ def _run_update(record: dict, print_fn, ask_fn, update_fn, id_field: str, id_val
     print(ColWidth.SEP_LINE)
     fields = ask_fn()
     if not fields:
-        print(f'{Prefix.ERROR} {Msg.Error.NO_CHANGES}')
+        _error(Msg.Error.NO_CHANGES)
         return 1
     update_fn(id_val, fields)
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {id_field}{Fmt.KV_SEP}{id_val}')
@@ -156,12 +151,41 @@ def _run_delete(record: dict, print_fn, delete_fn, id_field: str, id_val: str) -
         print(f'{Prefix.INFO} {Msg.Info.DELETE_CANCELLED}')
         return 0
     elif confirm != Confirm.YES:
-        print(f'{Prefix.ERROR} {Msg.Error.CONFIRM_INVALID}')
-        print(f'{Prefix.HINT} {Msg.Hint.CONFIRM_INVALID}')
+        _error(Msg.Error.CONFIRM_INVALID, Msg.Hint.CONFIRM_INVALID)
         return 1
     delete_fn(id_val)
     print(f'{Prefix.DONE.format(Prefix.REMOVE)} {id_field}{Fmt.KV_SEP}{id_val}')
     return 0
+
+
+class _Target(NamedTuple):
+    record: dict | None
+    print_fn: Callable
+    id_field: str
+    not_found: str
+    hint: str
+    ask: Callable
+    update: Callable
+    delete: Callable
+
+
+def _resolve(svc: BudgetService, rec_id: str) -> _Target:
+    """ID 접두사로 거래/반복 내역을 구분해 처리에 필요한 바인딩을 반환."""
+    if rec_id.startswith(TxId.RX_PREFIX):
+        return _Target(
+            record=svc.find_recurring(rec_id),
+            print_fn=print_recurring, id_field=RecurringField.ID,
+            not_found=Msg.Error.RECURRING_NOT_FOUND, hint=Msg.Hint.RECURRING_ID,
+            ask=lambda: _ask_update_recurring_fields(svc.list_categories()),
+            update=svc.update_recurring, delete=svc.delete_recurring,
+        )
+    return _Target(
+        record=svc.find_transaction(rec_id),
+        print_fn=print_tx, id_field=TxField.ID,
+        not_found=Msg.Error.TX_NOT_FOUND, hint=Msg.Hint.TX_ID,
+        ask=lambda: _ask_update_fields(svc.list_categories()),
+        update=svc.update_transaction, delete=svc.delete_transaction,
+    )
 
 
 # ── 커맨드 핸들러 ─────────────────────────────────────────────────
@@ -238,47 +262,21 @@ def cmd_search(args: argparse.Namespace) -> int:
 @handle_errors
 def cmd_update(args: argparse.Namespace) -> int:
     svc = BudgetService(args.data_dir)
-
-    if args.tx_id.startswith(TxId.RX_PREFIX):
-        record = svc.find_recurring(args.tx_id)
-        if record is None:
-            print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
-            print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
-            return 1
-        return _run_update(record, print_recurring,
-                           lambda: _ask_update_recurring_fields(svc.list_categories()),
-                           svc.update_recurring, RecurringField.ID, args.tx_id)
-
-    record = svc.find_transaction(args.tx_id)
-    if record is None:
-        print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
-        print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
+    t = _resolve(svc, args.tx_id)
+    if t.record is None:
+        _error(t.not_found.format(args.tx_id), t.hint)
         return 1
-    return _run_update(record, print_tx,
-                       lambda: _ask_update_fields(svc.list_categories()),
-                       svc.update_transaction, TxField.ID, args.tx_id)
+    return _run_update(t.record, t.print_fn, t.ask, t.update, t.id_field, args.tx_id)
 
 
 @handle_errors
 def cmd_delete(args: argparse.Namespace) -> int:
     svc = BudgetService(args.data_dir)
-
-    if args.tx_id.startswith(TxId.RX_PREFIX):
-        record = svc.find_recurring(args.tx_id)
-        if record is None:
-            print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
-            print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
-            return 1
-        return _run_delete(record, print_recurring,
-                           svc.delete_recurring, RecurringField.ID, args.tx_id)
-
-    record = svc.find_transaction(args.tx_id)
-    if record is None:
-        print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
-        print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
+    t = _resolve(svc, args.tx_id)
+    if t.record is None:
+        _error(t.not_found.format(args.tx_id), t.hint)
         return 1
-    return _run_delete(record, print_tx,
-                       svc.delete_transaction, TxField.ID, args.tx_id)
+    return _run_delete(t.record, t.print_fn, t.delete, t.id_field, args.tx_id)
 
 
 @handle_errors
@@ -301,7 +299,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
             print(f'{i}) {ljust_display(cat, ColWidth.CATEGORY)} {amt:,}{Fmt.CURRENCY}')
 
     budget = data[SummaryKey.BUDGET]
-    if budget is not None:
+    if budget is not None and budget > 0:
         usage = data[SummaryKey.EXPENSE_TOTAL] / budget * Fmt.PERCENT_FACTOR
         print(f'\n{Prefix.BUDGET_SECTION}')
         print(f'{Msg.Info.BUDGET_AMOUNT}: {budget:,}{Fmt.CURRENCY}')
@@ -325,8 +323,7 @@ def cmd_budget(args: argparse.Namespace) -> int:
             f'{BudgetField.AMOUNT}{Fmt.KV_SEP}{args.amount:,}{Fmt.CURRENCY}'
         )
     else:
-        print(f'{Prefix.ERROR} {Msg.Error.BUDGET_INVALID_CMD}')
-        print(f'{Prefix.HINT} {Msg.Hint.BUDGET_INVALID_CMD}')
+        _error(Msg.Error.BUDGET_INVALID_CMD, Msg.Hint.BUDGET_INVALID_CMD)
         return 1
 
     return 0
@@ -335,8 +332,7 @@ def cmd_budget(args: argparse.Namespace) -> int:
 @handle_errors
 def cmd_export(args: argparse.Namespace) -> int:
     if not args.month and not args.from_date and not args.to_date:
-        print(f'{Prefix.ERROR} {Msg.Error.EXPORT_NO_FILTER}')
-        print(f'{Prefix.HINT} {Msg.Hint.EXPORT_FILTER}')
+        _error(Msg.Error.EXPORT_NO_FILTER, Msg.Hint.EXPORT_FILTER)
         return 1
 
     svc   = BudgetService(args.data_dir)
@@ -390,8 +386,7 @@ def cmd_category(args: argparse.Namespace) -> int:
         print(f'{Prefix.DONE.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
 
     else:
-        print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_INVALID_CMD}')
-        print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_INVALID_CMD}')
+        _error(Msg.Error.CATEGORY_INVALID_CMD, Msg.Hint.CATEGORY_INVALID_CMD)
         return 1
 
     return 0

@@ -75,6 +75,7 @@ class Prefix:
 class Msg:
     class Error:
         DATE_FORMAT             = '날짜 형식이 올바르지 않습니다.'
+        MONTH_FORMAT            = '"{}"은(는) 올바른 월 형식이 아닙니다.'
         TYPE_INVALID            = 'income 또는 expense만 입력 가능합니다.'
         AMOUNT_NOT_NUM          = '숫자만 입력 가능합니다.'
         AMOUNT_NOT_POS          = '0보다 큰 금액을 입력하세요.'
