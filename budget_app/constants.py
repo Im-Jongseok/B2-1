@@ -37,13 +37,11 @@ class TxId:
 
 
 class TxField:
-    ID        = 'id'
-    TYPE      = 'type'
-    DATE      = 'date'
-    AMOUNT    = 'amount'
-    CATEGORY  = 'category'
-    MEMO      = 'memo'
-    TAGS      = 'tags'
+    ID       = 'id'
+    TYPE     = 'type'
+    DATE     = 'date'
+    AMOUNT   = 'amount'
+    CATEGORY = 'category'
 
 
 class RecurringField:
@@ -92,8 +90,8 @@ class Msg:
         EXPORT_NO_FILTER        = '--month 또는 --from/--to 조건을 하나 이상 입력하세요.'
         FILE_NOT_FOUND          = '"{}" 파일을 찾을 수 없습니다.'
         JSON_CORRUPT            = '데이터 파일이 손상되었습니다.'
-        DAY_INVALID         = '1~31 사이의 숫자를 입력하세요.'
-        RECURRING_NOT_FOUND = '"{}" 반복 내역을 찾을 수 없습니다.'
+        DAY_INVALID             = '1~31 사이의 숫자를 입력하세요.'
+        RECURRING_NOT_FOUND     = '"{}" 반복 내역을 찾을 수 없습니다.'
 
     class Hint:
         DATE_FORMAT          = '예: 2024-01-15'
@@ -109,8 +107,8 @@ class Msg:
         EXPORT_FILTER        = '예: --month 2024-01 또는 --from 2024-01-01 --to 2024-01-31'
         DATA_DIR             = '데이터 디렉토리 또는 파일 경로를 확인하세요.'
         JSONL_FILE           = 'jsonl 파일을 직접 수정했다면 형식을 확인하세요.'
-        DAY          = '예: 25 (매월 25일)'
-        RECURRING_ID = '예: RX-000001 (list --recurring으로 ID를 확인하세요.)'
+        DAY                  = '예: 25 (매월 25일)'
+        RECURRING_ID         = '예: RX-000001 (list --recurring으로 ID를 확인하세요.)'
 
     class Info:
         SAVE_OK          = 'id={}'
@@ -134,6 +132,14 @@ class Msg:
     class Warn:
         BUDGET_EXCEEDED = '예산을 {}원 초과했습니다!'
         UNKNOWN_FIELD   = '알 수 없는 필드 무시됨: {}'
+
+
+class SummaryKey:
+    INCOME_TOTAL  = 'income_total'
+    EXPENSE_TOTAL = 'expense_total'
+    BALANCE       = 'balance'
+    TOP_EXPENSE   = 'top_expense'
+    BUDGET        = 'budget'
 
 
 class Confirm:
@@ -169,16 +175,14 @@ class Fmt:
 
 
 class Prompt:
-    DATE           = '날짜(YYYY-MM-DD): '
-    TYPE           = '타입(income/expense): '
-    CATEGORY       = '카테고리: '
+    DATE                    = '날짜(YYYY-MM-DD): '
+    TYPE                    = '타입(income/expense): '
+    CATEGORY                = '카테고리: '
     UPDATE_FIELDS           = '수정할 필드 (date type category amount, 공백 구분): '
     UPDATE_RECURRING_FIELDS = '수정할 필드 (type day category amount, 공백 구분): '
-    DELETE_CONFIRM = '정말 삭제하시겠습니까? (y/n): '
-    AMOUNT         = '금액(양수): '
-    MEMO           = '메모(선택): '
-    TAGS           = '태그(쉼표로 구분, 없으면 엔터): '
-    DAY            = '날짜(매월 몇일, 1-31): '
+    DELETE_CONFIRM          = '정말 삭제하시겠습니까? (y/n): '
+    AMOUNT                  = '금액(양수): '
+    DAY                     = '날짜(매월 몇일, 1-31): '
 
 
 class CLI:
@@ -210,63 +214,54 @@ class CLI:
         TOP   = 5
 
     class Opt:
-        LIMIT    = '--limit'
-        FROM     = '--from'
-        TO       = '--to'
-        CATEGORY = '--category'
-        TYPE     = '--type'
-        Q        = '--q'
-        TAG      = '--tag'
+        LIMIT     = '--limit'
+        FROM      = '--from'
+        TO        = '--to'
+        CATEGORY  = '--category'
+        TYPE      = '--type'
         MONTH     = '--month'
         TOP       = '--top'
         ID        = '--id'
         OUT       = '--out'
-        DATE      = '--date'
-        MEMO      = '--memo'
-        TAGS      = '--tags'
         AMOUNT    = '--amount'
         RECURRING = '--recurring'
         DAY       = '--day'
 
     class Dest:
-        FROM_DATE     = 'from_date'
-        TO_DATE       = 'to_date'
-        TX_TYPE       = 'tx_type'
-        TX_ID         = 'tx_id'
-        FROM_FILE     = 'from_file'
-        MONTH         = 'month'
+        FROM_DATE    = 'from_date'
+        TO_DATE      = 'to_date'
+        TX_TYPE      = 'tx_type'
+        TX_ID        = 'tx_id'
+        FROM_FILE    = 'from_file'
+        MONTH        = 'month'
         BUDGET_CMD   = 'budget_cmd'
         CATEGORY_CMD = 'category_cmd'
         DAY          = 'day'
 
     class Help:
-        ADD                 = '거래 추가 (--recurring --day N: 반복 내역 등록)'
-        LIST                = '거래 목록 조회 (--recurring: 반복 내역 목록)'
-        SEARCH              = '거래 검색'
-        SUMMARY             = '월별 요약'
-        BUDGET              = '예산 관리'
-        BUDGET_SET          = '예산 설정'
-        CATEGORY            = '카테고리 관리'
-        CATEGORY_ADD        = '카테고리 추가 (대화형)'
-        CATEGORY_LIST       = '카테고리 목록'
-        CATEGORY_REMOVE     = '카테고리 삭제 (대화형)'
-        UPDATE              = '거래 수정 (옵션 기반)'
-        DELETE              = '거래 삭제'
-        EXPORT              = 'CSV 내보내기'
-        IMPORT              = 'CSV 가져오기'
-        BACKUP              = '데이터 백업'
-        APPLY               = '반복 내역을 특정 월에 거래로 생성'
-        LIMIT               = '표시 건수 (기본: 10)'
-        TOP                 = 'TOP N (기본: 5)'
-        MONTH               = 'YYYY-MM'
-        AMOUNT              = '예산 금액'
-        TX_ID               = '거래 ID'
-        OUT                 = '출력 파일 경로'
-        FROM_DATE           = '시작일 (YYYY-MM-DD)'
-        TO_DATE             = '종료일 (YYYY-MM-DD)'
-        TX_TYPE             = '타입'
-        DATE_ARG            = '변경할 날짜'
-        TYPE_ARG            = '변경할 타입'
-        CATEGORY_ARG        = '카테고리 필터'
-        CATEGORY_UPDATE_ARG = '변경할 카테고리'
-        AMOUNT_ARG          = '변경할 금액'
+        ADD             = '거래 추가 (--recurring --day N: 반복 내역 등록)'
+        LIST            = '거래 목록 조회 (--recurring: 반복 내역 목록)'
+        SEARCH          = '거래 검색'
+        SUMMARY         = '월별 요약'
+        BUDGET          = '예산 관리'
+        BUDGET_SET      = '예산 설정'
+        CATEGORY        = '카테고리 관리'
+        CATEGORY_ADD    = '카테고리 추가 (대화형)'
+        CATEGORY_LIST   = '카테고리 목록'
+        CATEGORY_REMOVE = '카테고리 삭제 (대화형)'
+        UPDATE          = '거래 수정 (옵션 기반)'
+        DELETE          = '거래 삭제'
+        EXPORT          = 'CSV 내보내기'
+        IMPORT          = 'CSV 가져오기'
+        BACKUP          = '데이터 백업'
+        APPLY           = '반복 내역을 특정 월에 거래로 생성'
+        LIMIT           = '표시 건수 (기본: 10)'
+        TOP             = 'TOP N (기본: 5)'
+        MONTH           = 'YYYY-MM'
+        AMOUNT          = '예산 금액'
+        TX_ID           = '거래 ID'
+        OUT             = '출력 파일 경로'
+        FROM_DATE       = '시작일 (YYYY-MM-DD)'
+        TO_DATE         = '종료일 (YYYY-MM-DD)'
+        TX_TYPE         = '타입'
+        CATEGORY_ARG    = '카테고리 필터'
