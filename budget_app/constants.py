@@ -117,6 +117,24 @@ class Confirm:
     NO  = 'n'
 
 
+class ColHeader:
+    ID       = 'ID'
+    DATE     = 'DATE'
+    TYPE     = '타입'
+    CATEGORY = '카테고리'
+    AMOUNT   = '금액'
+
+
+class ColWidth:
+    ID       = 9
+    DATE     = 10
+    TYPE     = 4
+    CATEGORY = 12
+    AMOUNT   = 12
+    SEP      = 59
+    SEP_LINE = '-' * SEP
+
+
 class Fmt:
     CURRENCY  = '원'
     KV_SEP    = '='

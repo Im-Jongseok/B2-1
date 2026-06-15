@@ -13,6 +13,7 @@ from .constants import (
     Confirm, Fmt,
 )
 from .decorators import handle_errors
+from .formatter import print_tx, print_tx_header
 from .models import Transaction
 from .repository import TransactionRepository, CategoryRepository, BudgetRepository
 from .service import BudgetService
@@ -101,19 +102,6 @@ def _input_tx(svc: BudgetService) -> dict:
     }
 
 
-# ── 출력 헬퍼 ────────────────────────────────────────────────
-
-def _print_tx(r: dict) -> None:
-    tx_type = TxType.INCOME_KO if r[TxField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
-    amount_str = f"{r[TxField.AMOUNT]:,}{Fmt.CURRENCY}"
-    print(
-        f"{r[TxField.ID]}{Fmt.COL_SEP}"
-        f"{r[TxField.DATE]}{Fmt.COL_SEP}"
-        f"{tx_type}{Fmt.COL_SEP}"
-        f"{r[TxField.CATEGORY]:<12}{Fmt.COL_SEP}"
-        f"{amount_str:>12}"
-    )
-
 
 # ── 필터 헬퍼 ────────────────────────────────────────────────
 
@@ -157,8 +145,9 @@ def cmd_search(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
+    print_tx_header()
     for record in reversed(records):
-        _print_tx(record)
+        print_tx(record)
     return 0
 
 
@@ -172,7 +161,7 @@ def cmd_update(args: argparse.Namespace) -> int:
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
 
-    _print_tx(record)
+    print_tx(record)
 
     category_repo = CategoryRepository(args.data_dir)
     fields = _ask_update_fields(category_repo)
@@ -183,7 +172,7 @@ def cmd_update(args: argparse.Namespace) -> int:
 
     tx_repo.update(args.tx_id, fields)
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {TxField.ID}{Fmt.KV_SEP}{args.tx_id}')
-    _print_tx({**record, **fields})
+    print_tx({**record, **fields})
     return 0
 
 
@@ -197,7 +186,7 @@ def cmd_delete(args: argparse.Namespace) -> int:
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
 
-    _print_tx(record)
+    print_tx(record)
     confirm = input(Prompt.DELETE_CONFIRM).strip().lower()
     if confirm == Confirm.NO:
         print(f'{Prefix.INFO} {Msg.Info.DELETE_CANCELLED}')
@@ -358,8 +347,9 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
+    print_tx_header()
     for record in islice(reversed(records), args.limit):
-        _print_tx(record)
+        print_tx(record)
     return 0
 
 
