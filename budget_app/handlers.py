@@ -1,33 +1,26 @@
 from __future__ import annotations
 
 import argparse
-import calendar
-import csv
-import shutil
-
-from collections import defaultdict
-from datetime import date, datetime
 from itertools import islice
 
 from .constants import (
-    TxType, TxField, TxId, BudgetField, RecurringField,
+    TxType, TxField, TxId, BudgetField, RecurringField, SummaryKey,
     Prefix, Msg, Prompt, CLI,
-    Confirm, Fmt, ColWidth, Files,
+    Confirm, Fmt, ColWidth,
 )
 from .decorators import handle_errors
 from .formatter import ljust_display, print_tx, print_tx_header
-from .models import Transaction, RecurringTx
-from .repository import TransactionRepository, CategoryRepository, BudgetRepository, RecurringRepository
 from .service import BudgetService
 
 
-# ── 대화형 입력 헬퍼 ─────────────────────────────────────────
+# ── 대화형 입력 헬퍼 ─────────────────────────────────────────────
 
 def _ask_date() -> str:
+    from datetime import date as _date
     while True:
         raw = input(Prompt.DATE).strip()
         try:
-            date.fromisoformat(raw)
+            _date.fromisoformat(raw)
             return raw
         except ValueError:
             print(f'{Prefix.ERROR} {Msg.Error.DATE_FORMAT}')
@@ -43,7 +36,7 @@ def _ask_type() -> str:
         print(f'{Prefix.HINT} {Msg.Hint.TYPE_INVALID}')
 
 
-def _ask_new_category(category_repo: CategoryRepository) -> str:
+def _ask_new_category(category_repo) -> str:
     while True:
         raw = input(Prompt.CATEGORY).strip().lower()
         if not raw:
@@ -56,7 +49,7 @@ def _ask_new_category(category_repo: CategoryRepository) -> str:
         return raw
 
 
-def _ask_category(category_repo: CategoryRepository) -> str:
+def _ask_category(category_repo) -> str:
     categories = category_repo.list_categories()
     while True:
         print(f'{Prefix.CATEGORIES} {Fmt.LIST_SEP.join(categories)}')
@@ -92,11 +85,11 @@ def _ask_day() -> int:
             print(f'{Prefix.ERROR} {Msg.Error.DAY_INVALID}')
             print(f'{Prefix.HINT} {Msg.Hint.DAY}')
         except ValueError:
-            print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_NUM}')
+            print(f'{Prefix.ERROR} {Msg.Error.DAY_INVALID}')
             print(f'{Prefix.HINT} {Msg.Hint.DAY}')
 
 
-def _ask_update_recurring_fields(category_repo: CategoryRepository) -> dict:
+def _ask_update_recurring_fields(category_repo) -> dict:
     FIELD_HANDLERS = {
         RecurringField.TYPE:     _ask_type,
         RecurringField.DAY:      _ask_day,
@@ -106,13 +99,13 @@ def _ask_update_recurring_fields(category_repo: CategoryRepository) -> dict:
     raw = input(Prompt.UPDATE_RECURRING_FIELDS).strip().lower()
     tokens = raw.split()
     selected = [f for f in tokens if f in FIELD_HANDLERS]
-    unknown = [f for f in tokens if f not in FIELD_HANDLERS]
+    unknown  = [f for f in tokens if f not in FIELD_HANDLERS]
     if unknown:
         print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
     return {field: FIELD_HANDLERS[field]() for field in selected}
 
 
-def _ask_update_fields(category_repo: CategoryRepository) -> dict:
+def _ask_update_fields(category_repo) -> dict:
     FIELD_HANDLERS = {
         TxField.DATE:     _ask_date,
         TxField.TYPE:     _ask_type,
@@ -122,7 +115,7 @@ def _ask_update_fields(category_repo: CategoryRepository) -> dict:
     raw = input(Prompt.UPDATE_FIELDS).strip().lower()
     tokens = raw.split()
     selected = [f for f in tokens if f in FIELD_HANDLERS]
-    unknown = [f for f in tokens if f not in FIELD_HANDLERS]
+    unknown  = [f for f in tokens if f not in FIELD_HANDLERS]
     if unknown:
         print(f'{Prefix.WARN} {Msg.Warn.UNKNOWN_FIELD.format(Fmt.LIST_SEP.join(unknown))}')
     return {field: FIELD_HANDLERS[field]() for field in selected}
@@ -137,27 +130,7 @@ def _input_tx(svc: BudgetService) -> dict:
     }
 
 
-# ── 필터 헬퍼 ────────────────────────────────────────────────
-
-def _matches_filter(
-    r: dict,
-    from_date: str | None,
-    to_date: str | None,
-    tx_type: str | None,
-    category: str | None,
-) -> bool:
-    if from_date and r[TxField.DATE] < from_date:
-        return False
-    if to_date and r[TxField.DATE] > to_date:
-        return False
-    if tx_type and r[TxField.TYPE] != tx_type:
-        return False
-    if category and r[TxField.CATEGORY] != category:
-        return False
-    return True
-
-
-# ── update / delete 공통 흐름 ────────────────────────────────
+# ── update / delete 공통 흐름 ─────────────────────────────────────
 
 def _run_update(record: dict, print_fn, ask_fn, update_fn, id_field: str, id_val: str) -> int:
     print(f'{Msg.Info.BEFORE}')
@@ -192,7 +165,7 @@ def _run_delete(record: dict, print_fn, delete_fn, id_field: str, id_val: str) -
     return 0
 
 
-# ── 반복 내역 헬퍼 ───────────────────────────────────────────
+# ── 반복 내역 헬퍼 ────────────────────────────────────────────────
 
 def _print_recurring(r: dict) -> None:
     type_ko = TxType.INCOME_KO if r[RecurringField.TYPE] == TxType.INCOME else TxType.EXPENSE_KO
@@ -206,25 +179,21 @@ def _print_recurring(r: dict) -> None:
     )
 
 
-# ── 커맨드 핸들러 ─────────────────────────────────────────────
+# ── 커맨드 핸들러 ─────────────────────────────────────────────────
 
 @handle_errors
 def cmd_add(args: argparse.Namespace) -> int:
+    svc = BudgetService(args.data_dir)
     if args.recurring:
-        rx_repo       = RecurringRepository(args.data_dir)
-        category_repo = CategoryRepository(args.data_dir)
         tx_type  = _ask_type()
-        category = _ask_category(category_repo)
+        category = _ask_category(svc.category_repo)
         day      = _ask_day()
         amount   = _ask_amount()
-        rx = RecurringTx(id=rx_repo.generate_id(), type=tx_type, day=day, category=category, amount=amount)
-        rx_repo.add(rx)
+        rx = svc.add_recurring(tx_type, day, category, amount)
         _print_recurring(rx.to_dict())
         return 0
-
-    service = BudgetService(args.data_dir)
-    tx = _input_tx(service)
-    result = service.add_transaction(**tx)
+    tx = _input_tx(svc)
+    result = svc.add_transaction(**tx)
     print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.SAVE_OK.format(result.id)}')
     print(ColWidth.SEP_LINE)
     print_tx(result.to_dict())
@@ -234,9 +203,9 @@ def cmd_add(args: argparse.Namespace) -> int:
 
 @handle_errors
 def cmd_list(args: argparse.Namespace) -> int:
+    svc = BudgetService(args.data_dir)
     if args.recurring:
-        rx_repo = RecurringRepository(args.data_dir)
-        records = list(rx_repo.stream())
+        records = svc.list_recurring()
         if not records:
             print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
             return 0
@@ -245,8 +214,7 @@ def cmd_list(args: argparse.Namespace) -> int:
             _print_recurring(r)
         return 0
 
-    tx_repo = TransactionRepository(args.data_dir)
-    records = list(tx_repo.stream())
+    records = svc.list_transactions()
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
@@ -259,36 +227,19 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 @handle_errors
 def cmd_apply(args: argparse.Namespace) -> int:
-    rx_repo   = RecurringRepository(args.data_dir)
-    tx_repo   = TransactionRepository(args.data_dir)
-    year      = int(args.month[:4])
-    month_num = int(args.month[5:])
-    last_day  = calendar.monthrange(year, month_num)[1]
-
-    created = 0
-    for tmpl in rx_repo.stream():
-        actual_day = min(tmpl[RecurringField.DAY], last_day)
-        tx = Transaction(
-            id=tx_repo.generate_id(),
-            type=tmpl[RecurringField.TYPE],
-            date=f'{args.month}-{actual_day:02d}',
-            amount=tmpl[RecurringField.AMOUNT],
-            category=tmpl[RecurringField.CATEGORY],
-        )
-        tx_repo.add(tx)
-        created += 1
-
-    print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.APPLY_RESULT.format(args.month, created)}')
+    svc = BudgetService(args.data_dir)
+    created, skipped = svc.apply_recurring(args.month)
+    msg = Msg.Info.APPLY_RESULT.format(args.month, created)
+    if skipped:
+        msg += f', 중복={skipped}'
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {msg}')
     return 0
 
 
 @handle_errors
 def cmd_search(args: argparse.Namespace) -> int:
-    tx_repo = TransactionRepository(args.data_dir)
-    records = [
-        r for r in tx_repo.stream()
-        if _matches_filter(r, args.from_date, args.to_date, args.tx_type, args.category)
-    ]
+    svc = BudgetService(args.data_dir)
+    records = svc.search_transactions(args.from_date, args.to_date, args.tx_type, args.category)
     if not records:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
@@ -301,89 +252,77 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 @handle_errors
 def cmd_update(args: argparse.Namespace) -> int:
-    category_repo = CategoryRepository(args.data_dir)
+    svc = BudgetService(args.data_dir)
 
     if args.tx_id.startswith(TxId.RX_PREFIX):
-        rx_repo = RecurringRepository(args.data_dir)
-        record = rx_repo.find(args.tx_id)
+        record = svc.find_recurring(args.tx_id)
         if record is None:
             print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
             print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
             return 1
-        return _run_update(record, _print_recurring, lambda: _ask_update_recurring_fields(category_repo),
-                           rx_repo.update, RecurringField.ID, args.tx_id)
+        return _run_update(record, _print_recurring,
+                           lambda: _ask_update_recurring_fields(svc.category_repo),
+                           svc.update_recurring, RecurringField.ID, args.tx_id)
 
-    tx_repo = TransactionRepository(args.data_dir)
-    record = tx_repo.find(args.tx_id)
+    record = svc.find_transaction(args.tx_id)
     if record is None:
         print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
-    return _run_update(record, print_tx, lambda: _ask_update_fields(category_repo),
-                       tx_repo.update, TxField.ID, args.tx_id)
+    return _run_update(record, print_tx,
+                       lambda: _ask_update_fields(svc.category_repo),
+                       svc.update_transaction, TxField.ID, args.tx_id)
 
 
 @handle_errors
 def cmd_delete(args: argparse.Namespace) -> int:
+    svc = BudgetService(args.data_dir)
+
     if args.tx_id.startswith(TxId.RX_PREFIX):
-        rx_repo = RecurringRepository(args.data_dir)
-        record = rx_repo.find(args.tx_id)
+        record = svc.find_recurring(args.tx_id)
         if record is None:
             print(f'{Prefix.ERROR} {Msg.Error.RECURRING_NOT_FOUND.format(args.tx_id)}')
             print(f'{Prefix.HINT} {Msg.Hint.RECURRING_ID}')
             return 1
-        return _run_delete(record, _print_recurring, rx_repo.remove, RecurringField.ID, args.tx_id)
+        return _run_delete(record, _print_recurring,
+                           svc.delete_recurring, RecurringField.ID, args.tx_id)
 
-    tx_repo = TransactionRepository(args.data_dir)
-    record = tx_repo.find(args.tx_id)
+    record = svc.find_transaction(args.tx_id)
     if record is None:
         print(f'{Prefix.ERROR} {Msg.Error.TX_NOT_FOUND.format(args.tx_id)}')
         print(f'{Prefix.HINT} {Msg.Hint.TX_ID}')
         return 1
-    return _run_delete(record, print_tx, tx_repo.delete, TxField.ID, args.tx_id)
+    return _run_delete(record, print_tx,
+                       svc.delete_transaction, TxField.ID, args.tx_id)
 
 
 @handle_errors
 def cmd_summary(args: argparse.Namespace) -> int:
-    tx_repo = TransactionRepository(args.data_dir)
-    budget_repo = BudgetRepository(args.data_dir)
+    svc  = BudgetService(args.data_dir)
+    data = svc.get_summary(args.month, args.top)
 
-    income_total = 0
-    expense_total = 0
-    category_expense: dict = defaultdict(int)
-
-    for r in tx_repo.stream():
-        if not r[TxField.DATE].startswith(args.month):
-            continue
-        if r[TxField.TYPE] == TxType.INCOME:
-            income_total += r[TxField.AMOUNT]
-        else:
-            expense_total += r[TxField.AMOUNT]
-            category_expense[r[TxField.CATEGORY]] += r[TxField.AMOUNT]
-
-    if income_total == 0 and expense_total == 0:
+    if data[SummaryKey.INCOME_TOTAL] == 0 and data[SummaryKey.EXPENSE_TOTAL] == 0:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
 
     print(f'{Prefix.SUMMARY.format(args.month)}')
-    print(f'{Msg.Info.INCOME_TOTAL}: {income_total:,}{Fmt.CURRENCY}')
-    print(f'{Msg.Info.EXPENSE_TOTAL}: {expense_total:,}{Fmt.CURRENCY}')
-    print(f'{Msg.Info.BALANCE}: {income_total - expense_total:,}{Fmt.CURRENCY}')
+    print(f'{Msg.Info.INCOME_TOTAL}: {data[SummaryKey.INCOME_TOTAL]:,}{Fmt.CURRENCY}')
+    print(f'{Msg.Info.EXPENSE_TOTAL}: {data[SummaryKey.EXPENSE_TOTAL]:,}{Fmt.CURRENCY}')
+    print(f'{Msg.Info.BALANCE}: {data[SummaryKey.BALANCE]:,}{Fmt.CURRENCY}')
 
-    if category_expense:
-        top = sorted(category_expense.items(), key=lambda x: x[1], reverse=True)[:args.top]
+    if data[SummaryKey.TOP_EXPENSE]:
         print(f'\n{Prefix.TOP_EXPENSE.format(args.top)}')
-        for i, (cat, amt) in enumerate(top, 1):
+        for i, (cat, amt) in enumerate(data[SummaryKey.TOP_EXPENSE], 1):
             print(f'{i}) {ljust_display(cat, 12)} {amt:,}{Fmt.CURRENCY}')
 
-    budget = budget_repo.get(args.month)
+    budget = data[SummaryKey.BUDGET]
     if budget is not None:
-        usage = expense_total / budget * 100
+        usage = data[SummaryKey.EXPENSE_TOTAL] / budget * 100
         print(f'\n{Prefix.BUDGET_SECTION}')
         print(f'{Msg.Info.BUDGET_AMOUNT}: {budget:,}{Fmt.CURRENCY}')
-        print(f'{Msg.Info.BUDGET_USAGE}: {expense_total:,}{Fmt.CURRENCY} ({usage:.1f}{Fmt.PERCENT})')
-        if expense_total > budget:
-            over = expense_total - budget
+        print(f'{Msg.Info.BUDGET_USAGE}: {data[SummaryKey.EXPENSE_TOTAL]:,}{Fmt.CURRENCY} ({usage:.1f}{Fmt.PERCENT})')
+        if data[SummaryKey.EXPENSE_TOTAL] > budget:
+            over = data[SummaryKey.EXPENSE_TOTAL] - budget
             print(f'{Prefix.WARN} {Msg.Warn.BUDGET_EXCEEDED.format(f"{over:,}")}')
 
     return 0
@@ -391,14 +330,10 @@ def cmd_summary(args: argparse.Namespace) -> int:
 
 @handle_errors
 def cmd_budget(args: argparse.Namespace) -> int:
-    budget_repo = BudgetRepository(args.data_dir)
+    svc = BudgetService(args.data_dir)
 
     if args.budget_cmd == CLI.Command.SET:
-        if args.amount <= 0:
-            print(f'{Prefix.ERROR} {Msg.Error.AMOUNT_NOT_POS}')
-            print(f'{Prefix.HINT} {Msg.Hint.AMOUNT}')
-            return 1
-        budget_repo.set(args.month, args.amount)
+        svc.set_budget(args.month, args.amount)
         print(
             f'{Prefix.DONE.format(Prefix.SAVE)} '
             f'{BudgetField.MONTH}{Fmt.KV_SEP}{args.month} '
@@ -419,108 +354,54 @@ def cmd_export(args: argparse.Namespace) -> int:
         print(f'{Prefix.HINT} {Msg.Hint.EXPORT_FILTER}')
         return 1
 
-    tx_repo = TransactionRepository(args.data_dir)
-    results = tx_repo.stream()
-    if args.month:
-        results = (r for r in results if r[TxField.DATE].startswith(args.month))
-    if args.from_date:
-        results = (r for r in results if r[TxField.DATE] >= args.from_date)
-    if args.to_date:
-        results = (r for r in results if r[TxField.DATE] <= args.to_date)
-    records = list(results)
-
-    if not records:
+    svc   = BudgetService(args.data_dir)
+    count = svc.export_transactions(args.out, args.month, args.from_date, args.to_date)
+    if count == 0:
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
 
-    fields = [TxField.ID, TxField.DATE, TxField.TYPE, TxField.AMOUNT, TxField.CATEGORY]
-    with open(args.out, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
-        writer.writeheader()
-        writer.writerows(records)
-
-    print(f'{Prefix.DONE.format(Prefix.SAVE)} {args.out} {Msg.Info.EXPORT_RESULT.format(len(records))}')
+    print(f'{Prefix.DONE.format(Prefix.SAVE)} {args.out} {Msg.Info.EXPORT_RESULT.format(count)}')
     return 0
 
 
 @handle_errors
 def cmd_import(args: argparse.Namespace) -> int:
-    tx_repo = TransactionRepository(args.data_dir)
-    category_repo = CategoryRepository(args.data_dir)
-    existing_ids = {r[TxField.ID] for r in tx_repo.stream()}
-    imported = 0
-    skipped = 0
-
-    with open(args.from_file, 'r', newline='', encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            try:
-                if row[TxField.CATEGORY] not in category_repo.list_categories():
-                    skipped += 1
-                    continue
-                tx = Transaction(
-                    id=row[TxField.ID],
-                    date=row[TxField.DATE],
-                    type=row[TxField.TYPE],
-                    amount=int(row[TxField.AMOUNT]),
-                    category=row[TxField.CATEGORY],
-                )
-            except (ValueError, KeyError):
-                skipped += 1
-                continue
-
-            if tx.id in existing_ids:
-                skipped += 1
-                continue
-
-            tx_repo.add(tx)
-            existing_ids.add(tx.id)
-            imported += 1
-
-    print(f'{Prefix.DONE.format(Prefix.SAVE)} {Msg.Info.IMPORT_IMPORTED}{Fmt.KV_SEP}{imported}{Fmt.LIST_SEP}{Msg.Info.IMPORT_SKIPPED}{Fmt.KV_SEP}{skipped}')
+    svc = BudgetService(args.data_dir)
+    imported, skipped = svc.import_transactions(args.from_file)
+    print(
+        f'{Prefix.DONE.format(Prefix.SAVE)} '
+        f'{Msg.Info.IMPORT_IMPORTED}{Fmt.KV_SEP}{imported}'
+        f'{Fmt.LIST_SEP}{Msg.Info.IMPORT_SKIPPED}{Fmt.KV_SEP}{skipped}'
+    )
     return 0
 
 
 @handle_errors
 def cmd_backup(args: argparse.Namespace) -> int:
-    timestamp  = datetime.now().strftime(Files.BACKUP_TS_FMT)
-    backup_dir = args.data_dir / Files.BACKUP_DIR / timestamp
-    backup_dir.mkdir(parents=True, exist_ok=True)
-
-    for filename in [Files.TRANSACTIONS, Files.CATEGORIES, Files.BUDGETS, Files.RECURRING]:
-        src = args.data_dir / filename
-        if src.exists():
-            shutil.copy2(src, backup_dir / filename)
-
+    svc = BudgetService(args.data_dir)
+    backup_dir = svc.backup()
     print(f'{Prefix.DONE.format(Prefix.BACKUP)} {Msg.Info.BACKUP_OK.format(backup_dir)}')
     return 0
 
 
 @handle_errors
 def cmd_category(args: argparse.Namespace) -> int:
-    category_repo = CategoryRepository(args.data_dir)
+    svc = BudgetService(args.data_dir)
 
     if args.category_cmd == CLI.Command.LIST:
-        categories = category_repo.list_categories()
+        categories = svc.list_categories()
         print(f'{Prefix.CATEGORIES} ({len(categories)})')
         for i, c in enumerate(categories, 1):
             print(f'{i}. {c}')
 
     elif args.category_cmd == CLI.Command.ADD:
-        category = _ask_new_category(category_repo)
-        category_repo.add(category)
+        category = _ask_new_category(svc.category_repo)
+        svc.add_category(category)
         print(f'{Prefix.DONE.format(Prefix.SAVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
 
     elif args.category_cmd == CLI.Command.REMOVE:
-        tx_repo = TransactionRepository(args.data_dir)
-        category = _ask_category(category_repo)
-
-        has_tx = any(r[TxField.CATEGORY] == category for r in tx_repo.stream())
-        if has_tx:
-            print(f'{Prefix.ERROR} {Msg.Error.CATEGORY_USED.format(category)}')
-            print(f'{Prefix.HINT} {Msg.Hint.CATEGORY_USED}')
-            return 1
-
-        category_repo.remove(category)
+        category = _ask_category(svc.category_repo)
+        svc.remove_category(category)
         print(f'{Prefix.DONE.format(Prefix.REMOVE)} {CLI.Command.CATEGORY}{Fmt.KV_SEP}{category}')
 
     else:
