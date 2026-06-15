@@ -3,6 +3,8 @@
 .DS_store   
 CLAUDE.md
 data/
+test_data/
+
 *.csv
 
 # Byte-compiled / optimized / DLL files
