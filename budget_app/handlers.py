@@ -12,6 +12,7 @@ from .constants import (
     Prefix, Msg, Prompt, CLI,
     Confirm, Fmt,
 )
+from .decorators import handle_errors
 from .models import Transaction
 from .repository import TransactionRepository, CategoryRepository, BudgetRepository
 from .service import BudgetService
@@ -137,6 +138,7 @@ def _matches_filter(
 
 # ── 커맨드 핸들러 ─────────────────────────────────────────────
 
+@handle_errors
 def cmd_add(args: argparse.Namespace) -> int:
     service = BudgetService(args.data_dir)
     tx = _input_tx(service)
@@ -145,6 +147,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_search(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
     records = [
@@ -159,6 +162,7 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_update(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
 
@@ -183,6 +187,7 @@ def cmd_update(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_delete(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
 
@@ -208,6 +213,7 @@ def cmd_delete(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_summary(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
     budget_repo = BudgetRepository(args.data_dir)
@@ -253,6 +259,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_budget(args: argparse.Namespace) -> int:
     budget_repo = BudgetRepository(args.data_dir)
 
@@ -275,6 +282,7 @@ def cmd_budget(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_export(args: argparse.Namespace) -> int:
     if not args.month and not args.from_date and not args.to_date:
         print(f'{Prefix.ERROR} {Msg.Error.EXPORT_NO_FILTER}')
@@ -306,21 +314,15 @@ def cmd_export(args: argparse.Namespace) -> int:
 
 
 
+@handle_errors
 def cmd_import(args: argparse.Namespace) -> int:
-    try:
-        f = open(args.from_file, 'r', newline='', encoding='utf-8')
-    except FileNotFoundError:
-        print(f'{Prefix.ERROR} {Msg.Error.FILE_NOT_FOUND.format(args.from_file)}')
-        print(f'{Prefix.HINT} {Msg.Hint.FILE_NOT_FOUND}')
-        return 1
-
     tx_repo = TransactionRepository(args.data_dir)
     category_repo = CategoryRepository(args.data_dir)
     existing_ids = {r[TxField.ID] for r in tx_repo.stream()}
     imported = 0
     skipped = 0
 
-    with f:
+    with open(args.from_file, 'r', newline='', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             try:
                 if row[TxField.CATEGORY] not in category_repo.list_categories():
@@ -349,6 +351,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_list(args: argparse.Namespace) -> int:
     tx_repo = TransactionRepository(args.data_dir)
     records = list(tx_repo.stream())
@@ -360,6 +363,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+@handle_errors
 def cmd_category(args: argparse.Namespace) -> int:
     category_repo = CategoryRepository(args.data_dir)
 

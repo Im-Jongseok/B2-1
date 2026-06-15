@@ -77,6 +77,7 @@ class Msg:
         BUDGET_INVALID_CMD = 'budget set 명령을 사용하세요.'
         EXPORT_NO_FILTER   = '--month 또는 --from/--to 조건을 하나 이상 입력하세요.'
         FILE_NOT_FOUND     = '"{}" 파일을 찾을 수 없습니다.'
+        JSON_CORRUPT       = '데이터 파일이 손상되었습니다.'
 
     class Hint:
         DATE_FORMAT       = '예: 2024-01-15'
@@ -90,12 +91,14 @@ class Msg:
         CONFIRM_INVALID   = 'y(삭제) 또는 n(취소)을 입력하세요.'
         BUDGET_INVALID_CMD = '예: budget_app budget set --month 2024-01 --amount 500000'
         EXPORT_FILTER      = '예: --month 2024-01 또는 --from 2024-01-01 --to 2024-01-31'
-        FILE_NOT_FOUND     = '파일 경로를 확인하세요.'
+        DATA_DIR           = '데이터 디렉토리 또는 파일 경로를 확인하세요.'
+        JSONL_FILE         = 'jsonl 파일을 직접 수정했다면 형식을 확인하세요.'
 
     class Info:
         SAVE_OK           = 'id={}'
         NO_DATA           = '데이터 없음'
         DELETE_CANCELLED  = '삭제를 취소했습니다.'
+        INTERRUPTED       = '취소되었습니다.'
         INCOME_TOTAL      = '총수입'
         EXPENSE_TOTAL     = '총지출'
         BALANCE           = '잔  액'
