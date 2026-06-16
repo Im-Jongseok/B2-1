@@ -228,7 +228,6 @@ class CLI:
         OUT       = '--out'
         AMOUNT    = '--amount'
         RECURRING = '--recurring'
-        DAY       = '--day'
 
     class Dest:
         FROM_DATE    = 'from_date'
@@ -239,10 +238,9 @@ class CLI:
         MONTH        = 'month'
         BUDGET_CMD   = 'budget_cmd'
         CATEGORY_CMD = 'category_cmd'
-        DAY          = 'day'
 
     class Help:
-        ADD             = '거래 추가 (--recurring --day N: 반복 내역 등록)'
+        ADD             = '거래 추가 (--recurring: 반복 내역 등록)'
         LIST            = '거래 목록 조회 (--recurring: 반복 내역 목록)'
         SEARCH          = '거래 검색'
         SUMMARY         = '월별 요약'

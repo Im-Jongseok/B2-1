@@ -28,10 +28,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest=CLI.COMMAND_DEST, help=CLI.COMMAND_HELP)
 
-    # add [--recurring --day N]
+    # add [--recurring]
     p_add = sub.add_parser(CLI.Command.ADD, help=CLI.Help.ADD)
     p_add.add_argument(CLI.Opt.RECURRING, action='store_true', default=False)
-    p_add.add_argument(CLI.Opt.DAY, dest=CLI.Dest.DAY, type=int, default=None)
 
     # list [--limit N] [--recurring]
     p_list = sub.add_parser(CLI.Command.LIST, help=CLI.Help.LIST)
@@ -126,5 +125,5 @@ def main() -> int:
     return handler(args)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
