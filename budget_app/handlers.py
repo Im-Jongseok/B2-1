@@ -219,7 +219,7 @@ def cmd_list(args: argparse.Namespace) -> int:
             print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
             return 0
         print(f'{Prefix.INFO} {Msg.Info.COUNT.format(len(records))}')
-        for r in records:
+        for r in islice(records, args.limit):
             print_recurring(r)
         return 0
 
@@ -283,8 +283,11 @@ def cmd_delete(args: argparse.Namespace) -> int:
 def cmd_summary(args: argparse.Namespace) -> int:
     svc  = BudgetService(args.data_dir)
     data = svc.get_summary(args.month, args.top)
+    budget = data[SummaryKey.BUDGET]
 
-    if data[SummaryKey.INCOME_TOTAL] == 0 and data[SummaryKey.EXPENSE_TOTAL] == 0:
+    if (data[SummaryKey.INCOME_TOTAL] == 0
+            and data[SummaryKey.EXPENSE_TOTAL] == 0
+            and budget is None):
         print(f'{Prefix.INFO} {Msg.Info.NO_DATA}')
         return 0
 
@@ -298,7 +301,6 @@ def cmd_summary(args: argparse.Namespace) -> int:
         for i, (cat, amt) in enumerate(data[SummaryKey.TOP_EXPENSE], 1):
             print(f'{i}) {ljust_display(cat, ColWidth.CATEGORY)} {amt:,}{Fmt.CURRENCY}')
 
-    budget = data[SummaryKey.BUDGET]
     if budget is not None and budget > 0:
         usage = data[SummaryKey.EXPENSE_TOTAL] / budget * Fmt.PERCENT_FACTOR
         print(f'\n{Prefix.BUDGET_SECTION}')
